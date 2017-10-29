@@ -2,6 +2,9 @@
  * UTF-8 (with BOM) Simplified Chinese ZH-CN text strings for overview.sh html elements
  */
 
+ovwS.Luci="界面切换";
+ovwS.Build="固件标识";
+ovwS.builder_name="百草郎君";
 ovwS.mDevice="设备";
 ovwS.mWAN="WAN";
 ovwS.mLAN="LAN";

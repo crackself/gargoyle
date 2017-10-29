@@ -2,6 +2,9 @@
  * UTF-8 (with BOM) English-EN text strings for overview.sh html elements
  */
 
+ovwS.Luci="Web GUI ";
+ovwS.Build="Firmware ID";
+ovwS.builder_name="crackself";
 ovwS.mDevice="Device";
 ovwS.mWAN="WAN";
 ovwS.mLAN="LAN";
