@@ -1,0 +1,628 @@
+--- a/feeds.conf.default
++++ b/feeds.conf.default
+@@ -1,5 +1,5 @@
+ src-git packages https://github.com/openwrt/packages.git;for-15.05
+-src-git luci https://github.com/openwrt/luci.git;for-15.05
++src-git luci https://github.com/crackself/luci.git;for-15.05
+ src-git routing https://github.com/openwrt-routing/packages.git;for-15.05
+ src-git telephony https://github.com/openwrt/telephony.git;for-15.05
+ src-git management https://github.com/openwrt-management/packages.git;for-15.05
+--- a/package/kernel/mac80211/files/lib/wifi/mac80211.sh
++++ b/package/kernel/mac80211/files/lib/wifi/mac80211.sh
+@@ -106,22 +106,28 @@ detect_mac80211() {
+ 		else
+ 			dev_id="	option macaddr	$(cat /sys/class/ieee80211/${dev}/macaddress)"
+ 		fi
++		if [ x$mode_band == x"a" ]; then
++			ssid_5ghz="-5G"
++		else
++			ssid_5ghz=""
++		fi
+ 
+ 		cat <<EOF
+ config wifi-device  radio$devidx
+ 	option type     mac80211
+ 	option channel  ${channel}
++	option country	CN
+ 	option hwmode	11${mode_band}
+ $dev_id
+ $ht_capab
+ 	# REMOVE THIS LINE TO ENABLE WIFI:
+-	option disabled 1
++	option disabled 0
+ 
+ config wifi-iface
+ 	option device   radio$devidx
+ 	option network  lan
+ 	option mode     ap
+-	option ssid     OpenWrt
++	option ssid     GARGOYLE${ssid_5ghz}
+ 	option encryption none
+ 
+ EOF
+--- a/target/linux/ramips/base-files/etc/board.d/01_leds
++++ b/target/linux/ramips/base-files/etc/board.d/01_leds
+@@ -262,6 +262,12 @@ case $board in
+ 		set_usb_led "lenovo:blue:usb"
+ 		set_wifi_led "lenovo:blue:wifi"
+ 		;;
++	YK-L1)
++ 		ucidef_set_led_default "power" "power" "youku:blue:power" "1"
++ 		ucidef_set_led_netdev "wan" "wan" "youku:blue:wan" "eth0.2"
++ 		set_usb_led "youku:blue:usb"
++ 		set_wifi_led "youku:blue:wifi"
++ 		;;
+ 	zbt-wg2626)
+ 		ucidef_set_led_default "power" "power" "zbt-wg2626:green:power" "1"
+ 		set_wifi_led "zbt-wg2626:green:air"
+@@ -270,6 +276,10 @@ case $board in
+ 	zte-q7)
+ 		set_wifi_led "zte:blue:status"
+ 		;;
++	psg1218 |\
++  	psg1218-16m)
++  		ucidef_set_led_default "system" "system" "phicomm:yellow:status" "1"
++  		;;
+ esac
+ 
+ board_config_flush
+--- a/target/linux/ramips/base-files/etc/board.d/02_network
++++ b/target/linux/ramips/base-files/etc/board.d/02_network
+@@ -147,6 +147,9 @@ ramips_setup_interfaces()
+ 	wt1520 | \
+ 	xiaomi-miwifi-mini |\
+ 	y1|\
++	YK-L1 |\
++ 	psg1218 |\
++  	psg1218-16m |\
+ 	zbt-wg2626)
+ 		ucidef_set_interfaces_lan_wan "eth0.1" "eth0.2"
+ 		ucidef_add_switch "switch0" "1" "1"
+--- a/target/linux/ramips/base-files/etc/diag.sh
++++ b/target/linux/ramips/base-files/etc/diag.sh
+@@ -250,12 +250,19 @@ get_status_led() {
+ 	y1s)
+ 		status_led="lenovo:blue:power"
+ 		;;
++	YK-L1)
++ 		status_led="youku:blue:power"
++ 		;;
+ 	zbt-wg2626)
+ 		status_led="zbt-wg2626:green:status"
+ 		;;
+ 	zte-q7)
+ 		status_led="zte:red:status"
+ 		;;
++	psg1218|\
++  	psg1218-16m)
++  		status_led="phicomm:yellow:status"
++  		;;
+ 	esac
+ }
+ 
+--- a/target/linux/ramips/base-files/lib/ramips.sh
++++ b/target/linux/ramips/base-files/lib/ramips.sh
+@@ -421,6 +421,15 @@ ramips_board_detect() {
+ 	*"Lenovo Y1S")
+ 		name="y1s"
+ 		;;
++	*"YouKu YK-L1")
++ 		name="YK-L1"
++ 		;;
++ 	*"PHICOMM PSG1218/K2")
++  		name="psg1218"
++  		;;
++  	*"PHICOMM PSG1218/K2")
++  		name="psg1218-16m"
++  		;;
+ 	*"Mediatek MT7621 evaluation board")
+ 		name="mt7621"
+ 		;;
+--- a/target/linux/ramips/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ramips/base-files/lib/upgrade/platform.sh
+@@ -125,6 +125,9 @@ platform_check_image() {
+ 	x5 |\
+ 	x8 |\
+ 	xiaomi-miwifi-mini |\
++	YK-L1 |\
++ 	psg1218 |\
++  	psg1218-16m |\
+ 	y1 |\
+ 	y1s |\
+ 	zbt-wa05 |\
+--- /dev/null
++++ b/target/linux/ramips/dts/PSG1218-16M.dts
+@@ -0,0 +1,119 @@
++/dts-v1/;
++
++/include/ "mt7620a.dtsi"
++
++/ {
++	compatible = "PSG1218-16M", "ralink,mt7620a-soc";
++	model = "PHICOMM PSG1218/K2";
++
++	palmbus@10000000 {
++		gpio0: gpio@600 {
++			status = "okay";
++		};
++
++		spi@b00 {
++			status = "okay";
++
++			m25p80@0 {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "w25q128";
++				reg = <0 0>;
++				linux,modalias = "m25p80", "w25q128";
++				spi-max-frequency = <10000000>;
++
++				partition@0 {
++					label = "u-boot";
++					reg = <0x0 0x30000>;
++				};
++
++				partition@30000 {
++					label = "u-boot-env";
++					reg = <0x30000 0x10000>;
++					read-only;
++				};
++
++				factory: partition@40000 {
++					label = "factory";
++					reg = <0x40000 0x10000>;
++					read-only;
++				};
++
++				partition@50000 {
++					label = "firmware";
++					reg = <0x50000 0xfb0000>;
++				};
++			};
++		};
++	};
++
++	ethernet@10100000 {
++		pinctrl-names = "default";
++		pinctrl-0 = <&ephy_pins>;
++		mtd-mac-address = <&factory 0x28>;
++		ralink,port-map = "llllw";
++	};
++
++	wmac@10180000 {
++		ralink,mtd-eeprom = <&factory 0>;
++	};
++
++	pcie@10140000 {
++		status = "okay";
++
++		pcie-bridge {
++			mt76@0,0 {
++				reg = <0x0000 0 0 0 0>;
++				device_type = "pci";
++				mediatek,mtd-eeprom = <&factory 0x8000>;
++				mediatek,2ghz = <0>;
++			};
++		};
++	};
++
++	pinctrl {
++		state_default: pinctrl0 {
++			gpio {
++				ralink,group = "i2c", "uartf";
++				ralink,function = "gpio";
++			};
++
++			pa {
++				ralink,group = "pa";
++				ralink,function = "pa";
++			};
++		};
++	};
++
++	gpio-leds {
++		compatible = "gpio-leds";
++
++		red {
++			label = "phicomm:red:status";
++			gpios = <&gpio0 8 1>;
++		};
++
++		blue {
++			label = "phicomm:blue:status";
++			gpios = <&gpio0 10 0>;
++		};
++
++		yellow {
++			label = "phicomm:yellow:status";
++			gpios = <&gpio0 11 0>;
++		};
++	};
++
++	gpio-keys-polled {
++		compatible = "gpio-keys-polled";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		poll-interval = <20>;
++
++		reset {
++			label = "reset";
++			gpios = <&gpio0 1 1>;
++			linux,code = <0x198>;
++		};
++	};
++};
+--- /dev/null
++++ b/target/linux/ramips/dts/PSG1218.dts
+@@ -0,0 +1,119 @@
++/dts-v1/;
++
++/include/ "mt7620a.dtsi"
++
++/ {
++	compatible = "PSG1218", "ralink,mt7620a-soc";
++	model = "PHICOMM PSG1218/K2";
++
++	palmbus@10000000 {
++		gpio0: gpio@600 {
++			status = "okay";
++		};
++
++		spi@b00 {
++			status = "okay";
++
++			m25p80@0 {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "gd25q64";
++				reg = <0 0>;
++				linux,modalias = "m25p80", "gd25q64";
++				spi-max-frequency = <10000000>;
++
++				partition@0 {
++					label = "u-boot";
++					reg = <0x0 0x30000>;
++				};
++
++				partition@30000 {
++					label = "u-boot-env";
++					reg = <0x30000 0x10000>;
++					read-only;
++				};
++
++				factory: partition@40000 {
++					label = "factory";
++					reg = <0x40000 0x10000>;
++					read-only;
++				};
++
++				partition@50000 {
++					label = "firmware";
++					reg = <0x50000 0x7b0000>;
++				};
++			};
++		};
++	};
++
++	ethernet@10100000 {
++		pinctrl-names = "default";
++		pinctrl-0 = <&ephy_pins>;
++		mtd-mac-address = <&factory 0x28>;
++		ralink,port-map = "llllw";
++	};
++
++	wmac@10180000 {
++		ralink,mtd-eeprom = <&factory 0>;
++	};
++
++	pcie@10140000 {
++		status = "okay";
++
++		pcie-bridge {
++			mt76@0,0 {
++				reg = <0x0000 0 0 0 0>;
++				device_type = "pci";
++				mediatek,mtd-eeprom = <&factory 0x8000>;
++				mediatek,2ghz = <0>;
++			};
++		};
++	};
++
++	pinctrl {
++		state_default: pinctrl0 {
++			gpio {
++				ralink,group = "i2c", "uartf";
++				ralink,function = "gpio";
++			};
++
++			pa {
++				ralink,group = "pa";
++				ralink,function = "pa";
++			};
++		};
++	};
++
++	gpio-leds {
++		compatible = "gpio-leds";
++
++		red {
++			label = "phicomm:red:status";
++			gpios = <&gpio0 8 1>;
++		};
++
++		blue {
++			label = "phicomm:blue:status";
++			gpios = <&gpio0 10 0>;
++		};
++
++		yellow {
++			label = "phicomm:yellow:status";
++			gpios = <&gpio0 11 0>;
++		};
++	};
++
++	gpio-keys-polled {
++		compatible = "gpio-keys-polled";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		poll-interval = <20>;
++
++		reset {
++			label = "reset";
++			gpios = <&gpio0 1 1>;
++			linux,code = <0x198>;
++		};
++	};
++};
+\ No newline at end of file
+--- /dev/null
++++ b/target/linux/ramips/dts/YK-L1.dts
+@@ -0,0 +1,137 @@
++/dts-v1/;
++
++/include/ "mt7620a.dtsi"
++
++/ {
++        compatible = "youku,yk-l1", "ralink,mt7620a-soc";
++        model = "YouKu YK-L1";
++
++        chosen {
++                bootargs = "console=ttyS0,115200";
++        };
++
++        palmbus@10000000 {
++                gpio0: gpio@600 {
++                        status = "okay";
++                };
++
++                gpio1: gpio@638 {
++                        status = "okay";
++                };
++
++                gpio2: gpio@660 {
++                        status = "okay";
++                };
++
++                gpio3: gpio@688 {
++                        status = "okay";
++                };
++
++                spi@b00 {
++                        status = "okay";
++
++                        m25p80@0 {
++                                #address-cells = <1>;
++                                #size-cells = <1>;
++                                compatible = "w25q128";
++                                reg = <0 0>;
++                                linux,modalias = "m25p80", "w25q256";
++                                spi-max-frequency = <10000000>;
++
++                                partition@0 {
++                                        label = "u-boot";
++                                        reg = <0x0 0x30000>;
++                                };
++
++                                partition@30000 {
++                                        label = "u-boot-env";
++                                        reg = <0x30000 0x10000>;
++                                        read-only;
++                                };
++
++                                factory: partition@40000 {
++                                        label = "factory";
++                                        reg = <0x40000 0x10000>;
++                                        read-only;
++                                };
++
++                                partition@50000 {
++                                        label = "firmware";
++                                        reg = <0x50000 0x1fb0000>;
++                                };
++                        };
++                };
++        };
++
++        ehci@101c0000 {
++                status = "okay";
++        };
++
++        ohci@101c1000 {
++                status = "okay";
++        };
++ 
++        sdhci@10130000 {
++                status = "okay";
++        };
++
++        ethernet@10100000 {
++                pinctrl-names = "default";
++                pinctrl-0 = <&ephy_pins>;
++                mtd-mac-address = <&factory 0x4>;
++                ralink,port-map = "llllw";
++        };
++
++        wmac@10180000 {
++                ralink,mtd-eeprom = <&factory 0>;
++        };
++
++        pcie@10140000 {
++                status = "okay";
++        };
++
++        pinctrl {
++                state_default: pinctrl0 {
++                        gpio {
++                                ralink,group = "i2c", "rgmii1", "ephy", "wled";
++                                ralink,function = "gpio";
++                        };
++                };
++        };
++
++        gpio-leds {
++                compatible = "gpio-leds";
++
++                power {
++                        label = "youku:blue:power";
++                        gpios = <&gpio1 5 1>;
++                };
++
++                usb {
++                        label = "youku:blue:usb";
++                        gpios = <&gpio1 11 1>;
++                };
++
++                wan {
++                        label = "youku:blue:wan";
++                        gpios = <&gpio2 4 1>;
++                };
++
++                wifi {
++                        label = "youku:blue:wifi";
++                        gpios = <&gpio3 0 1>;
++                };
++        };
++
++        gpio-keys-polled {
++                compatible = "gpio-keys-polled";
++                #address-cells = <1>;
++                #size-cells = <0>;
++                poll-interval = <20>;
++                reset {
++                        label = "reset";
++                        gpios = <&gpio0 1 1>;
++                        linux,code = <0x198>;
++                };
++        };
++};
+--- a/target/linux/ramips/image/Makefile
++++ b/target/linux/ramips/image/Makefile
+@@ -881,7 +881,7 @@ endef
+ 
+ Image/Build/Profile/E1700=$(call BuildFirmware/UMedia/$(1),$(1),e1700,E1700,0x013326)
+ ex2700_mtd_size=3866624
+-Image/Build/Profile/EX2700=$(call BuildFirmware/Netgear/$(1),$(1),ex2700,EX2700,65536,29764623+4+0+32+2x2+0,$(ex2700_mtd_size))
++#Image/Build/Profile/EX2700=$(call BuildFirmware/Netgear/$(1),$(1),ex2700,EX2700,65536,29764623+4+0+32+2x2+0,$(ex2700_mtd_size))
+ Image/Build/Profile/MT7620a=$(call BuildFirmware/Default8M/$(1),$(1),mt7620a,MT7620a)
+ Image/Build/Profile/MT7620a_MT7610e=$(call BuildFirmware/Default8M/$(1),$(1),mt7620a_mt7610e,MT7620a_MT7610e)
+ Image/Build/Profile/MT7620a_MT7530=$(call BuildFirmware/Default8M/$(1),$(1),mt7620a_mt7530,MT7620a_MT7530)
+@@ -910,9 +910,12 @@ Image/Build/Profile/WR8305RT=$(call BuildFirmware/Default8M/$(1),$(1),wr8305rt,W
+ Image/Build/Profile/WRTNODE=$(call BuildFirmware/Default16M/$(1),$(1),wrtnode,WRTNODE)
+ Image/Build/Profile/WT3020=$(call BuildFirmware/PorayDualSize/$(1),$(1),wt3020,WT3020)
+ Image/Build/Profile/XIAOMI-MIWIFI-MINI=$(call BuildFirmware/Default16M/$(1),$(1),xiaomi-miwifi-mini,XIAOMI-MIWIFI-MINI)
++Image/Build/Profile/YK-L1=$(call BuildFirmware/Default32M/$(1),$(1),YK-L1,YK-L1)
++Image/Build/Profile/PSG1218=$(call BuildFirmware/Default8M/$(1),$(1),psg1218,PSG1218)
++Image/Build/Profile/PSG1218-16M=$(call BuildFirmware/Default16M/$(1),$(1),psg1218-16m,PSG1218-16M)
+ Image/Build/Profile/ZTE-Q7=$(call BuildFirmware/Default8M/$(1),$(1),zte-q7,ZTE-Q7)
+ Image/Build/Profile/ZBT-WA05=$(call BuildFirmware/Default8M/$(1),$(1),zbt-wa05,ZBT-WA05)
+-Image/Build/Profile/ArcherC20i=$(call BuildFirmware/Tplink/$(1),$(1),ArcherC20i,ArcherC20i)
++#Image/Build/Profile/ArcherC20i=$(call BuildFirmware/Tplink/$(1),$(1),ArcherC20i,ArcherC20i)
+ microwrt_mtd_size=16515072
+ Image/Build/Profile/MicroWRT=$(call BuildFirmware/CustomFlash/$(1),$(1),microwrt,MicroWRT,$(microwrt_mtd_size))
+ 
+@@ -920,7 +923,7 @@ Image/Build/Profile/MicroWRT=$(call BuildFirmware/CustomFlash/$(1),$(1),microwrt
+ ifeq ($(SUBTARGET),mt7620)
+ define Image/Build/Profile/Default
+ 	$(call Image/Build/Profile/E1700,$(1))
+-	$(call Image/Build/Profile/EX2700,$(1))
++	#$(call Image/Build/Profile/EX2700,$(1))
+ 	$(call Image/Build/Profile/MT7620a,$(1))
+ 	$(call Image/Build/Profile/MT7620a_MT7610e,$(1))
+ 	$(call Image/Build/Profile/MT7620a_MT7530,$(1))
+@@ -944,9 +947,12 @@ define Image/Build/Profile/Default
+ 	$(call Image/Build/Profile/WRTNODE,$(1))
+ 	$(call Image/Build/Profile/WT3020,$(1))
+ 	$(call Image/Build/Profile/XIAOMI-MIWIFI-MINI,$(1))
++	$(call Image/Build/Profile/YK-L1,$(1))
++	$(call Image/Build/Profile/PSG1218,$(1))
++	$(call Image/Build/Profile/PSG1218-16M,$(1))
+ 	$(call Image/Build/Profile/ZTE-Q7,$(1))
+ 	$(call Image/Build/Profile/ZBT-WA05,$(1))
+-	$(call Image/Build/Profile/ArcherC20i,$(1))
++	#$(call Image/Build/Profile/ArcherC20i,$(1))
+ 	$(call Image/Build/Profile/MicroWRT,$(1))
+ endef
+ endif
+--- /dev/null
++++ b/target/linux/ramips/mt7620/profiles/YK-L1.mk
+@@ -0,0 +1,20 @@
++#
++# Copyright (C) 2015 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++define Profile/YK-L1
++ NAME:=YK-L1
++ PACKAGES:=\
++    kmod-usb-core kmod-usb-dwc2 kmod-usb2 \
++	kmod-mmc-spi kmod-sdhci kmod-sdhci-mt7620 \
++	kmod-ledtrig-usbdev \
++	-kmod-mt76
++endef
++
++define Profile/YK-L1/Description
++ Support for YK-L1 routers
++endef
++$(eval $(call Profile,YK-L1))
+--- /dev/null
++++ b/target/linux/ramips/mt7620/profiles/psg1218-16m.mk
+@@ -0,0 +1,17 @@
++#
++# Copyright (C) 2015 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++define Profile/PSG1218-16M
++ NAME:=PHICOMM PSG1218(16M)
++ PACKAGES:=kmod-mt76
++	
++endef
++
++define Profile/PSG1218-16M/Description
++ Support for PHICOMM PSG1218/K2(16M) routers
++endef
++$(eval $(call Profile,PSG1218-16M))
+--- /dev/null
++++ b/target/linux/ramips/mt7620/profiles/psg1218.mk
+@@ -0,0 +1,17 @@
++#
++# Copyright (C) 2015 OpenWrt.org
++#
++# This is free software, licensed under the GNU General Public License v2.
++# See /LICENSE for more information.
++#
++
++define Profile/PSG1218
++ NAME:=PHICOMM PSG1218
++ PACKAGES:=kmod-mt76
++	
++endef
++
++define Profile/PSG1218/Description
++ Support for PHICOMM PSG1218/K2 routers
++endef
++$(eval $(call Profile,PSG1218))
