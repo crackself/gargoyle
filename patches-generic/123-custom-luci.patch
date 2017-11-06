@@ -1,0 +1,74 @@
+--- a/modules/luci-base/po/zh-cn/base.po
++++ b/modules/luci-base/po/zh-cn/base.po
+@@ -3157,6 +3157,18 @@ msgstr "是"
+ msgid "« Back"
+ msgstr "« 后退"
+ 
++msgid "Chips Model"
++msgstr "芯片型号"
++
++msgid "Builder"
++msgstr "固件标识"
++
++msgid "Processor"
++msgstr "芯片型号"
++
++msgid "Architecture"
++msgstr "芯片平台"
++
+ #~ msgid "CPU frequency"
+ #~ msgstr "CPU 频率"
+ 
+--- a/modules/luci-base/root/etc/config/luci
++++ b/modules/luci-base/root/etc/config/luci
+@@ -1,5 +1,5 @@
+ config core main
+-	option lang auto
++	option lang 'zh_cn'
+ 	option mediaurlbase /luci-static/bootstrap
+ 	option resourcebase /luci-static/resources
+ 	
+@@ -13,6 +13,8 @@ config extern flash_keep
+ 	option uploads	"/lib/uci/upload/"
+ 	
+ config internal languages
++	option zh_cn 'chinese'
++	option en 'English'
+ 	
+ config internal sauth
+ 	option sessionpath "/tmp/luci-sessions"
+--- a/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
++++ b/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
+@@ -15,6 +15,9 @@
+ 	local has_wifi = ((fs.stat("/etc/config/wireless", "size") or 0) > 0)
+ 
+ 	local sysinfo = luci.util.ubus("system", "info") or { }
++	local cpuinfo = luci.sys.exec("cat /proc/cpuinfo") or { }
++	local processor = cpuinfo:match("system type\t+: ([^\n]+)") or { }
++	local march = cpuinfo:match("cpu model\t+: ([^\n]+)") or { }
+ 	local boardinfo = luci.util.ubus("system", "board") or { }
+ 	local unameinfo = nixio.uname() or { }
+ 
+@@ -560,6 +563,11 @@
+ 	<table width="100%" cellspacing="10">
+ 		<tr><td width="33%"><%:Hostname%></td><td><%=luci.sys.hostname() or "?"%></td></tr>
+ 		<tr><td width="33%"><%:Model%></td><td><%=pcdata(boardinfo.model or boardinfo.system or "?")%></td></tr>
++		<tr><td width="33%"><%:Processor%></td><td><%=pcdata(processor or "?")%></td></tr>
++		<tr><td width="33%"><%:Architecture%></td><td><%=pcdata(march or "?")%></td></tr>
++		<tr><td width="33%"><%:Builder%></td><td>
++            crackself  <%=luci.sys.exec("cat /proc/version | cut -f15-19 -d' '") %>
++		</td></tr>
+ 		<tr><td width="33%"><%:Firmware Version%></td><td>
+ 			<%=pcdata(ver.distname)%> <%=pcdata(ver.distversion)%> /
+ 			<%=pcdata(ver.luciname)%> (<%=pcdata(ver.luciversion)%>)
+--- a/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
++++ b/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
+@@ -114,7 +114,7 @@
+   <header>
+    <div class="fill">
+     <div class="container">
+-     <a class="brand" href="#"><%=boardinfo.hostname or "?"%></a>
++     <a class="brand" href="http://192.168.1.1"><%=boardinfo.hostname or "?"%></a>
+      <ul class="nav">
+ 	 <%-
+ 		local function submenu(prefix, node)
