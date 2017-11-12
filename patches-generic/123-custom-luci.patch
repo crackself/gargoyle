@@ -1,5 +1,5 @@
---- a/modules/luci-base/po/zh-cn/base.po
-+++ b/modules/luci-base/po/zh-cn/base.po
+--- a/package/luci/modules/luci-base/po/zh-cn/base.po
++++ b/package/luci/modules/luci-base/po/zh-cn/base.po
 @@ -3157,6 +3157,18 @@ msgstr "是"
  msgid "« Back"
  msgstr "« 后退"
@@ -19,8 +19,8 @@
  #~ msgid "CPU frequency"
  #~ msgstr "CPU 频率"
  
---- a/modules/luci-base/root/etc/config/luci
-+++ b/modules/luci-base/root/etc/config/luci
+--- a/package/luci/modules/luci-base/root/etc/config/luci
++++ b/package/luci/modules/luci-base/root/etc/config/luci
 @@ -1,5 +1,5 @@
  config core main
 -	option lang auto
@@ -37,8 +37,8 @@
  	
  config internal sauth
  	option sessionpath "/tmp/luci-sessions"
---- a/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
-+++ b/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
+--- a/package/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
++++ b/package/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
 @@ -15,6 +15,9 @@
  	local has_wifi = ((fs.stat("/etc/config/wireless", "size") or 0) > 0)
  
@@ -61,8 +61,8 @@
  		<tr><td width="33%"><%:Firmware Version%></td><td>
  			<%=pcdata(ver.distname)%> <%=pcdata(ver.distversion)%> /
  			<%=pcdata(ver.luciname)%> (<%=pcdata(ver.luciversion)%>)
---- a/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
-+++ b/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
+--- a/package/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
++++ b/package/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
 @@ -114,7 +114,7 @@
    <header>
     <div class="fill">
