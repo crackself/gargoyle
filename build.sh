@@ -470,10 +470,6 @@ fi
 if [ ! -d "$top_dir"/downloaded/luci ] ; then
 	echo "fetching luci source"
 	git clone -b for-15.05 https://github.com/openwrt/luci.git "$top_dir"/downloaded/
-	if [ ! -d "$top_dir"/downloaded/luci ] ; then
-		echo "ERROR: could not download luci source, exiting"
-		exit
-	fi
 fi
 	
 #download openwrt source if we haven't already

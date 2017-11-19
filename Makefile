@@ -1,5 +1,5 @@
 #GARGOYLE_VERSION:=1.10.X (Built $(shell echo "`date -u +%Y%m%d-%H%M` git@`git log -1 --pretty=format:%h`"))
-GARGOYLE_VERSION:=1.10.0 (定制版 $(shell echo "`date -u +%Y-%m%-d`"))
+GARGOYLE_VERSION:=1.10.0 (定制版 $(shell echo "`date -u +%Y-%m-%d` `date -u +%H`:`date -u +%M`"))
 V=99
 FULL_BUILD=false
 CUSTOM_TEMPLATE=ar71xx
@@ -10,7 +10,7 @@ TRANSLATION=internationalize
 FALLBACK_LANG=English-EN
 ACTIVE_LANG=English-EN
 #BUILD_THREADS=auto
-BUILD_THREADS=2
+BUILD_THREADS=3
 DISTRIBUTION=false
 
 ALL:
