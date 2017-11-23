@@ -465,12 +465,6 @@ else
 	rm -rf "$openwrt_src_dir"
 	rm -rf "$openwrt_package_dir"
 fi
-
-#download openwrt luci source if we haven't already
-if [ ! -d "$top_dir"/downloaded/luci ] ; then
-	echo "fetching luci source"
-	git clone -b for-15.05 https://github.com/openwrt/luci.git "$top_dir"/downloaded/
-fi
 	
 #download openwrt source if we haven't already
 if [ ! -d "$openwrt_src_dir" ] ; then
@@ -679,7 +673,6 @@ for target in $targets ; do
 
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "$openwrt_abbrev_commit" "package/base-files/files/etc/banner" "."
-
 		make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
 	fi
