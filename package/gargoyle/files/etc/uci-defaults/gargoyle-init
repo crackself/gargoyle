@@ -42,8 +42,8 @@ if [ "$settings_not_preserved" == "1" ] ; then
 	uci set system.@system[0].hostname="Gargoyle" 2>/dev/null
 	echo "Gargoyle" > /proc/sys/kernel/hostname   2>/dev/null
 
-	# # disable logging for cron -- it tends to clutter up logs, and it logs all jobs at "error" level, which is wrong
-	# uci set system.@system[0].cronloglevel=9
+	# disable logging for cron -- it tends to clutter up logs, and it logs all jobs at "error" level, which is wrong
+	uci set system.@system[0].cronloglevel=9
 
 	# # Allow resolution of NameCoin and OpenNIC domains by default
 	# uci add_list dhcp.@dnsmasq[0].server="/.bit/178.32.31.41"
@@ -58,7 +58,14 @@ if [ "$settings_not_preserved" == "1" ] ; then
 	/etc/init.d/miniupnpd disable       2>/dev/null
 	/etc/init.d/qos_gargoyle disable    2>/dev/null
 	/etc/init.d/webmon_gargoyle disable 2>/dev/null
-
+	/etc/init.d/minidlna disable 		2>/dev/null
+	/etc/init.d/openvpn disable 		2>/dev/null
+	/etc/init.d/p910nd disable 			2>/dev/null
+	/etc/init.d/openvpn disable 		2>/dev/null
+	/etc/init.d/mjpg-streamer disable	2>/dev/null
+	/etc/init.d/samba disable			2>/dev/null
+	/etc/init.d/tor disable				2>/dev/null
+	
 fi
 
 #
