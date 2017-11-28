@@ -18,7 +18,10 @@ var openDnsFS = ["208.67.222.123", "208.67.220.123" ];
 var nortonCSA = ["199.85.126.10", "199.85.127.10" ];
 var nortonCSB = ["199.85.126.20", "199.85.127.20" ];
 var nortonCSC = ["199.85.126.30", "199.85.127.30" ];
+<<<<<<< HEAD
 var aliDNS = ["114.114.114.114" , "114.114.115.115"];
+=======
+>>>>>>> upstream/master
 var quad9DNS = ["9.9.9.9" ];
 
 var ncDns  = [ "178.32.31.41", "106.187.47.17", "176.58.118.172" ]
@@ -904,10 +907,13 @@ function saveChanges()
 			{
 				dnsList = quad9DNS;
 			}
+<<<<<<< HEAD
 			else if(dnsSource == "alidns" && notBridge )
 			{
 				dnsList = aliDNS;
 			}
+=======
+>>>>>>> upstream/master
 			else //custom
 			{
 				var dnsData = getTableDataArray(document.getElementById("lan_dns_table_container").firstChild);
@@ -1124,6 +1130,12 @@ function setGlobalVisibility()
 	{
 		currentMode=getSelectedValue('wifi_mode');
 		setAllowableSelections('wifi_mode', ['ap', 'ap+wds', 'adhoc', 'disabled'], [basicS.AcPt+' (AP)', 'AP+WDS', 'Ad Hoc', UI.Disabled]);
+		if(wirelessDriver == "")
+		{
+			removeOptionFromSelectElementByValue("wifi_mode", "ap", document);
+			removeOptionFromSelectElementByValue("wifi_mode", "ap+wds", document);
+			removeOptionFromSelectElementByValue("wifi_mode", "adhoc", document);
+		}
 		if(currentMode == 'ap+sta' || currentMode == 'sta')
 		{
 			setSelectedValue('wifi_mode', 'ap');
@@ -1134,9 +1146,14 @@ function setGlobalVisibility()
 		}
 	}
 
-	var proto1 = ['dhcp_wired', 'pppoe_wired', 'static_wired', 'dhcp_wireless', 'static_wireless'];
-	var proto2 = ['DHCP ('+basicS.Wird+')', 'PPPoE ('+basicS.Wird+')', basicS.StIP+' ('+basicS.Wird+')', 'DHCP ('+basicS.Wrlss+')', basicS.StIP+' ('+basicS.Wrlss+')'];
+	var proto1 = ['dhcp_wired', 'pppoe_wired', 'static_wired'];
+	var proto2 = ['DHCP ('+basicS.Wird+')', 'PPPoE ('+basicS.Wird+')', basicS.StIP+' ('+basicS.Wird+')'];
 
+	if(wirelessDriver)
+	{
+		proto1.push('dhcp_wireless','static_wireless');
+		proto2.push('DHCP ('+basicS.Wrlss+')',basicS.StIP+' ('+basicS.Wrlss+')');
+	}
 	if(hasUSB)
 	{
 		proto1.push('3g');
@@ -1460,6 +1477,11 @@ function setBridgeVisibility()
 	}
 
 
+	//If no wireless, disable bridge/repeater setup
+	if(wirelessDriver == "")
+	{
+		document.getElementById("global_bridge").disabled = true;
+	}
 	setAllowableSelections("bridge_hwmode",allowedbridgemodes2,allowedbridgemodes)
 
 	setHwMode(document.getElementById("bridge_hwmode"))
@@ -1785,10 +1807,13 @@ function resetData()
 	{
 		dnsType = "quad9";
 	}
+<<<<<<< HEAD
 	else if( dnsTableData.join(",") == aliDNS.join(",") || dnsTableData.join(",") == aliDNS.reverse().join(",") )
 	{
 		dnsType = "alidns";
 	}
+=======
+>>>>>>> upstream/master
 	setSelectedValue("lan_dns_source", dnsType);
 	setDnsSource(document.getElementById("lan_dns_source"))
 
@@ -2743,6 +2768,10 @@ function parseWifiScan(rawScanOutput)
 
 function setChannelWidth(selectCtl, band)
 {
+	if(wirelessDriver == "")
+	{
+		return;
+	}
 	var chw =  getSelectedValue(selectCtl.id)
 	var hplus = chw =='HT40+';
 	var h40 = (chw == 'HT40+' || chw == 'HT40-');
@@ -2832,6 +2861,10 @@ function getSelectedWifiChannels()
 	var channels = []
 	channels["A"] = ""
 	channels["G"] = ""
+	if(wirelessDriver == "")
+	{
+		return channels;
+	}
 	if(document.getElementById("global_gateway").checked)
 	{
 		var wimode = getSelectedValue("wifi_mode")
