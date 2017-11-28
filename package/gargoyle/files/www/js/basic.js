@@ -18,10 +18,6 @@ var openDnsFS = ["208.67.222.123", "208.67.220.123" ];
 var nortonCSA = ["199.85.126.10", "199.85.127.10" ];
 var nortonCSB = ["199.85.126.20", "199.85.127.20" ];
 var nortonCSC = ["199.85.126.30", "199.85.127.30" ];
-<<<<<<< HEAD
-var aliDNS = ["114.114.114.114" , "114.114.115.115"];
-=======
->>>>>>> upstream/master
 var quad9DNS = ["9.9.9.9" ];
 
 var ncDns  = [ "178.32.31.41", "106.187.47.17", "176.58.118.172" ]
@@ -907,13 +903,6 @@ function saveChanges()
 			{
 				dnsList = quad9DNS;
 			}
-<<<<<<< HEAD
-			else if(dnsSource == "alidns" && notBridge )
-			{
-				dnsList = aliDNS;
-			}
-=======
->>>>>>> upstream/master
 			else //custom
 			{
 				var dnsData = getTableDataArray(document.getElementById("lan_dns_table_container").firstChild);
@@ -1807,13 +1796,6 @@ function resetData()
 	{
 		dnsType = "quad9";
 	}
-<<<<<<< HEAD
-	else if( dnsTableData.join(",") == aliDNS.join(",") || dnsTableData.join(",") == aliDNS.reverse().join(",") )
-	{
-		dnsType = "alidns";
-	}
-=======
->>>>>>> upstream/master
 	setSelectedValue("lan_dns_source", dnsType);
 	setDnsSource(document.getElementById("lan_dns_source"))
 
