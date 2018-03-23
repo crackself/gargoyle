@@ -579,7 +579,7 @@
 +$(eval $(call Profile,YK-L1))
 --- /dev/null
 +++ b/target/linux/ramips/mt7620/profiles/psg1218-16m.mk
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,19 @@
 +#
 +# Copyright (C) 2015 OpenWrt.org
 +#
@@ -589,7 +589,9 @@
 +
 +define Profile/PSG1218-16M
 + NAME:=PHICOMM PSG1218(16M)
-+ PACKAGES:=kmod-mt76
++ PACKAGES:=\
++	kmod-mt76 \
++	-kmod-usb-core -kmod-usb2 -kmod-usb-ohci -kmod-ledtrig-usbdev
 +	
 +endef
 +
@@ -599,7 +601,7 @@
 +$(eval $(call Profile,PSG1218-16M))
 --- /dev/null
 +++ b/target/linux/ramips/mt7620/profiles/psg1218.mk
-@@ -0,0 +1,17 @@
+@@ -0,0 +1,19 @@
 +#
 +# Copyright (C) 2015 OpenWrt.org
 +#
@@ -609,7 +611,9 @@
 +
 +define Profile/PSG1218
 + NAME:=PHICOMM PSG1218
-+ PACKAGES:=kmod-mt76
++ PACKAGES:=\
++	kmod-mt76 \
++	-kmod-usb-core -kmod-usb2 -kmod-usb-ohci -kmod-ledtrig-usbdev
 +	
 +endef
 +

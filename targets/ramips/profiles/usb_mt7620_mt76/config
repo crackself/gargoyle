@@ -47,11 +47,14 @@ CONFIG_TARGET_ramips_mt7620=y
 # CONFIG_TARGET_ramips_rt3883 is not set
 # CONFIG_TARGET_ramips_rt288x is not set
 CONFIG_TARGET_ramips_mt7620_Default=y
+# CONFIG_TARGET_ramips_mt7620_YK-L1 is not set
 # CONFIG_TARGET_ramips_mt7620_AIBR100 is not set
 # CONFIG_TARGET_ramips_mt7620_E1700 is not set
 # CONFIG_TARGET_ramips_mt7620_MT7620a is not set
 # CONFIG_TARGET_ramips_mt7620_MicroWRT is not set
 # CONFIG_TARGET_ramips_mt7620_EX2700 is not set
+# CONFIG_TARGET_ramips_mt7620_PSG1218-16M is not set
+# CONFIG_TARGET_ramips_mt7620_PSG1218 is not set
 # CONFIG_TARGET_ramips_mt7620_XIAOMI-MIWIFI-MINI is not set
 CONFIG_HAS_SUBTARGETS=y
 CONFIG_TARGET_BOARD="ramips"
