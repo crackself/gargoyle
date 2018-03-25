@@ -487,7 +487,7 @@ fi
 
 #download openwrt luci source if we haven't already
 if [ ! -d "$top_dir"/package/luci ] ; then
-	git clone -b for-15.05 https://github.com/openwrt/luci.git "$top_dir"/package/
+	git clone -b for-15.05 https://github.com/crackself/luci.git "$top_dir"/package/luci
 fi
 
 rm -rf "$openwrt_src_dir/dl" 
