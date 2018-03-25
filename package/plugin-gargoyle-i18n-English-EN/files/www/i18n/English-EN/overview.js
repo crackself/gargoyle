@@ -5,6 +5,7 @@
 ovwS.Luci="Web GUI ";
 ovwS.Build="Firmware ID";
 ovwS.builder_name="crackself";
+ovwS.luciweb="luci web";
 ovwS.mDevice="Device";
 ovwS.mWAN="WAN";
 ovwS.mLAN="LAN";
