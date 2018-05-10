@@ -93,17 +93,16 @@ create_gargoyle_banner()
 	local bottom_line=$(printf "| %-26s| %-35s|" "Built $date" "Target  $target/$profile")
 
 	cat << 'EOF' >"$banner_file_path"
-------------------------------------------------------------------
-|            _____                             _                 |
-|           |  __ \                           | |                |
-|           | |  \/ __ _ _ __ __ _  ___  _   _| | ___            |
-|           | | __ / _` | '__/ _` |/ _ \| | | | |/ _ \           |
-|           | |_\ \ (_| | | | (_| | (_) | |_| | |  __/           |
-|            \____/\__,_|_|  \__, |\___/ \__, |_|\___|           |
-|                             __/ |       __/ |                  |
-|                            |___/       |___/                   |
-|                                                                |
-|----------------------------------------------------------------|
+	My Gargoyle Router
+                                  .::!!!!!!!:.
+  .!!!!!:.        crackself        .:!!!!!!!!!!!!
+  ~~~~!!!!!!.                 .:!!!!!!!!!UWWW$$$
+      :$$NWX!!:           .:!!!!!!XUWW$$$$$$$$$P
+      $$$$$##WX!:      .<!!!!UW$$$$"  $$$$$$$$#
+      $$$$$  $$$UX   :!!UW$$$$$$$$$   4$$$$$*
+      ^$$$B  $$$$\     $$$$$$$$$$$$   d$$R"
+        "*$bd$$$$      '*$$$$$$$$$$$o+#"
+             """"          """""""
 EOF
 	echo "$top_line"    >> "$banner_file_path"
 	echo "$middle_line" >> "$banner_file_path"
@@ -667,9 +666,11 @@ for target in $targets ; do
 
 
 			if [ "$verbosity" = "0" ] ; then
+				./scripts/feeds update luci && ./scripts/feeds install luci
 				make $num_build_thread_str GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$profile_name"
 
 			else
+				./scripts/feeds update luci && ./scripts/feeds install luci
 				make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$profile_name"
 			fi
 

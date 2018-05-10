@@ -100,6 +100,8 @@
 
 			<div class="panel-body">
 				<ul class="list-group">
+					<li class="list-group-item"><span class="list-group-item-title"><%~ Luci %>:</span><span <h><a href="/cgi-bin/luci"><%~ luciweb %></a><h></span></li>
+					<li class="list-group-item"><span class="list-group-item-title"><%~ Build %>:</span><span <a> <%~ builder_name %></a></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ DNam %>:</span><span id="device_name"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ GVer %>:</span><span id="gargoyle_version"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ Modl %>:</span><span id="device_model"></span></li>
