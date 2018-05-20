@@ -631,6 +631,7 @@ for target in $targets ; do
 	#enter build directory and make sure we get rid of
 	#any crap left over from editing
 	cd "$top_dir/$target-src"
+	./scripts/feeds update luci && mv feeds/luci package/ && rm -rf feeds
 	find . -name "*~"    | xargs rm -rf
 	find . -name ".*sw*" | xargs rm -rf
 	
@@ -654,7 +655,6 @@ for target in $targets ; do
 		scripts/patch-kernel.sh . "$targets_dir/$target/patches/" >/dev/null 2>&1
 		if [ "$target" = "custom" ] ; then
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 1 0 >/dev/null 2>&1
-			./scripts/feeds update luci && ./scripts/feeds install luci
 			make menuconfig
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 0 1 >/dev/null 2>&1
 		else
@@ -665,7 +665,7 @@ for target in $targets ; do
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "$openwrt_abbrev_commit" "package/base-files/files/etc/banner" "."
 		
-		./scripts/feeds update luci && ./scripts/feeds install luci
+		./scripts/feeds update luci && mv feeds/luci package/ && rm -rf feeds
 		make $num_build_thread_str GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
 	else
@@ -673,7 +673,6 @@ for target in $targets ; do
 		scripts/patch-kernel.sh . "$targets_dir/$target/patches/" 
 		if [ "$target" = "custom" ] ; then
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 1 0  
-			./scripts/feeds update luci && ./scripts/feeds install luci
 			make menuconfig
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 0 1  
 		else
@@ -683,7 +682,6 @@ for target in $targets ; do
 
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "$openwrt_abbrev_commit" "package/base-files/files/etc/banner" "."
-		./scripts/feeds update luci && ./scripts/feeds install luci
 		make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
 	fi

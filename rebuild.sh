@@ -536,6 +536,8 @@ for target in $targets ; do
 		#enter build directory and make sure we get rid of all those pesky .svn files, 
 		#and any crap left over from editing
 		cd "$top_dir/$target-src"
+		#./scripts/feeds update luci && mv feeds/luci package/ 
+		rm -rf feeds
 		find . -name ".svn"  | xargs rm -rf
 		find . -name "*~"    | xargs rm -rf
 		find . -name ".*sw*" | xargs rm -rf
@@ -555,9 +557,11 @@ for target in $targets ; do
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "${openwrt_abbrev_commit}" "package/base-files/files/etc/banner" "."
 		if [ "$verbosity" = "0" ] ; then
+			./scripts/feeds update luci && mv feeds/luci package/ && rm -rf feeds
 			make $num_build_thread_str GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
 		else
+			./scripts/feeds update luci && mv feeds/luci package/ && rm -rf feeds
 			make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 		fi
 		
@@ -666,11 +670,9 @@ for target in $targets ; do
 
 
 			if [ "$verbosity" = "0" ] ; then
-				./scripts/feeds update luci && ./scripts/feeds install luci
 				make $num_build_thread_str GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$profile_name"
 
 			else
-				./scripts/feeds update luci && ./scripts/feeds install luci
 				make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$profile_name"
 			fi
 
