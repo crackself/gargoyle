@@ -1,0 +1,95 @@
+diff --git a/modules/luci-base/po/zh-cn/base.po b/modules/luci-base/po/zh-cn/base.po
+index df6ce8b..2273427 100644
+--- a/feeds/luci/modules/luci-base/po/zh-cn/base.po
++++ b/feeds/luci/modules/luci-base/po/zh-cn/base.po
+@@ -3868,6 +3868,18 @@ msgstr "是"
+ msgid "« Back"
+ msgstr "« 后退"
+ 
++msgid "Chips Model"
++msgstr "芯片型号"
++
++msgid "Builder"
++msgstr "固件标识"
++
++msgid "Processor"
++msgstr "芯片型号"
++
++msgid "Architecture"
++msgstr "芯片平台"
++
+ #~ msgid "Action"
+ #~ msgstr "动作"
+ 
+diff --git a/modules/luci-base/root/etc/config/luci b/modules/luci-base/root/etc/config/luci
+index baa3ac5..dea0197 100644
+--- a/feeds/luci/modules/luci-base/root/etc/config/luci
++++ b/feeds/luci/modules/luci-base/root/etc/config/luci
+@@ -1,5 +1,5 @@
+ config core main
+-	option lang auto
++	option lang 'zh_cn'
+ 	option mediaurlbase /luci-static/bootstrap
+ 	option resourcebase /luci-static/resources
+ 	
+@@ -13,7 +13,9 @@ config extern flash_keep
+ 	option uploads	"/lib/uci/upload/"
+ 	
+ config internal languages
+-	
++	option zh_cn 'chinese'
++	option en 'English'
++
+ config internal sauth
+ 	option sessionpath "/tmp/luci-sessions"
+ 	option sessiontime 3600
+diff --git a/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm b/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
+index 5e6e494..0acd1bc 100644
+--- a/feeds/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
++++ b/feeds/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
+@@ -17,6 +17,9 @@
+        local sysinfo = luci.util.ubus("system", "info") or { }
+        local boardinfo = luci.util.ubus("system", "board") or { }
+        local unameinfo = nixio.uname() or { }
++       local cpuinfo = luci.sys.exec("cat /proc/cpuinfo") or { }
++       local processor = cpuinfo:match("system type\t+: ([^\n]+)") or { }
++       local march = cpuinfo:match("cpu model\t+: ([^\n]+)") or { }
+
+        local meminfo = sysinfo.memory or {
+                total = 0,
+@@ -682,6 +682,9 @@
+ 	<table width="100%" cellspacing="10">
+ 		<tr><td width="33%"><%:Hostname%></td><td><%=luci.sys.hostname() or "?"%></td></tr>
+ 		<tr><td width="33%"><%:Model%></td><td><%=pcdata(boardinfo.model or boardinfo.system or "?")%></td></tr>
++		<tr><td width="33%"><%:Processor%></td><td><%=pcdata(processor or "?")%></td></tr>
++		<tr><td width="33%"><%:Architecture%></td><td><%=pcdata(march or "?")%></td></tr>
++		<tr><td width="33%"><%:Builder%></td><td> crackself  <%=luci.sys.exec("cat /proc/version | cut -f15-19 -d' '") %></td></tr>
+ 		<tr><td width="33%"><%:Firmware Version%></td><td>
+ 			<%=pcdata(ver.distname)%> <%=pcdata(ver.distversion)%> /
+ 			<%=pcdata(ver.luciname)%> (<%=pcdata(ver.luciversion)%>)
+diff --git a/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm b/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
+index 4881535..f58cef2 100644
+--- a/feeds/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
++++ b/feeds/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
+@@ -178,7 +178,7 @@
+ 		<header>
+ 			<div class="fill">
+ 				<div class="container">
+-					<a class="brand" href="#"><%=boardinfo.hostname or "?"%></a>
++					<a class="brand" href="#"><font color="Yellow"><%=boardinfo.model or "?"%></font></a>
+ 					<% render_topmenu() %>
+ 					<div class="pull-right">
+ 						<% render_changes() %>
+diff --git a/themes/luci-theme-material/luasrc/view/themes/material/header.htm b/themes/luci-theme-material/luasrc/view/themes/material/header.htm
+index 0aca882..328d452 100644
+--- a/feeds/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
++++ b/feeds/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
+@@ -217,7 +217,7 @@
+ <header>
+ 	<div class="container">
+ 		<span class="showSide"></span>
+-		<a class="brand" href="#"><%=boardinfo.hostname or "?"%></a>
++		<a class="brand" href="#"><font color="Yellow"><%=boardinfo.model or "?"%></font></a>
+ 		<div class="pull-right">
+ 			<% render_changes() %>
+ 			<span id="xhr_poll_status" style="display:none" onclick="XHR.running() ? XHR.halt() : XHR.run()">
