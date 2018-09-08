@@ -33,7 +33,7 @@ set_version_variables()
 	# set precise commit in repo to use 
 	# you can set this to an alternate commit 
 	# or empty to checkout latest 
-	openwrt_commit="ba204d941cdff2a81da323a9d613b039f196f03a"
+	openwrt_commit="6c075777d5afdeef7516e5125526b3f2c406f453"
 	openwrt_abbrev_commit=$( echo "$openwrt_commit" | cut -b 1-7 )
 	
 
@@ -754,11 +754,22 @@ for target in $targets ; do
 	if [ "$target" != "custom" ] && [ -z "$specified_profile" ] ; then
 		other_profiles=$(ls "$targets_dir/$target/profiles" | grep -v "^$default_profile$" )
 	fi
+
 	for profile_name in $other_profiles ; do
-
-
 		#copy profile config and rebuild
 		cp "$targets_dir/$target/profiles/$profile_name/config" .config
+		#clean out old bin folder to prevent contamination between profiles
+		arch=$(ls bin/targets)
+		profile_images=$(cat "$targets_dir/$target/profiles/$profile_name/profile_images" 2>/dev/null)
+		for pi in $profile_images ; do
+			escaped_pi=$(echo $pi | sed 's/-/\\-/g')
+			candidates=$(find "bin/targets/$arch/" 2>/dev/null | grep "$escaped_pi" )
+			for c in $candidates ; do
+				if [ ! -d "$c" ] ; then
+					rm "$c"
+				fi
+			done
+		done
 		
 		
 		[ ! -z $(which python 2>&1) ] && {
