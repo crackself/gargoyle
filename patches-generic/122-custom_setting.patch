@@ -2,6 +2,16 @@ diff --git a/package/base-files/files/bin/config_generate b/package/base-files/f
 index fa148685cc..ea55d653b6 100755
 --- a/package/base-files/files/bin/config_generate
 +++ b/package/base-files/files/bin/config_generate
+@@ -92,7 +92,7 @@ generate_network() {
+                static)
+                        local ipad
+                        case "$1" in
+-                               lan) ipad=${ipaddr:-"192.168.1.1"} ;;
++                               lan) ipad=${ipaddr:-"192.168.11.1"} ;;
+                                *) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"
+} ;;
+                        esac
+
 @@ -224,8 +224,9 @@ generate_static_system() {
  	uci -q batch <<-EOF
  		delete system.@system[0]
