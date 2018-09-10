@@ -60,8 +60,8 @@ index 279c8efcdb..354077733e 100644
  			set wireless.default_radio${devidx}.mode=ap
 -			set wireless.default_radio${devidx}.ssid=OpenWrt
 -			set wireless.default_radio${devidx}.encryption=none
-+			set wireless.default_radio${devidx}.ssid=My-Router${ssid_5ghz}
++			set wireless.default_radio${devidx}.ssid=GARGOYLE${ssid_5ghz}
 +			set wireless.default_radio${devidx}.encryption=psk2
-+			set wireless.default_radio${devidx}.key=crackself
++			set wireless.default_radio${devidx}.key=123456789
  EOF
  		uci -q commit wireless
