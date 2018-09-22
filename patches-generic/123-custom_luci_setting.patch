@@ -1,7 +1,7 @@
 diff --git a/modules/luci-base/po/zh-cn/base.po b/modules/luci-base/po/zh-cn/base.po
 index df6ce8b..2273427 100644
---- a/feeds/luci/modules/luci-base/po/zh-cn/base.po
-+++ b/feeds/luci/modules/luci-base/po/zh-cn/base.po
+--- a/package/luci/modules/luci-base/po/zh-cn/base.po
++++ b/package/luci/modules/luci-base/po/zh-cn/base.po
 @@ -3868,6 +3868,18 @@ msgstr "是"
  msgid "« Back"
  msgstr "« 后退"
@@ -23,8 +23,8 @@ index df6ce8b..2273427 100644
  
 diff --git a/modules/luci-base/root/etc/config/luci b/modules/luci-base/root/etc/config/luci
 index baa3ac5..dea0197 100644
---- a/feeds/luci/modules/luci-base/root/etc/config/luci
-+++ b/feeds/luci/modules/luci-base/root/etc/config/luci
+--- a/package/luci/modules/luci-base/root/etc/config/luci
++++ b/package/luci/modules/luci-base/root/etc/config/luci
 @@ -1,5 +1,5 @@
  config core main
 -	option lang auto
@@ -45,8 +45,8 @@ index baa3ac5..dea0197 100644
  	option sessiontime 3600
 diff --git a/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm b/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
 index 5e6e494..0acd1bc 100644
---- a/feeds/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
-+++ b/feeds/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
+--- a/package/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
++++ b/package/luci/modules/luci-mod-admin-full/luasrc/view/admin_status/index.htm
 @@ -17,6 +17,9 @@
         local sysinfo = luci.util.ubus("system", "info") or { }
         local boardinfo = luci.util.ubus("system", "board") or { }
@@ -69,8 +69,8 @@ index 5e6e494..0acd1bc 100644
  			<%=pcdata(ver.luciname)%> (<%=pcdata(ver.luciversion)%>)
 diff --git a/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm b/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
 index 4881535..f58cef2 100644
---- a/feeds/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
-+++ b/feeds/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
+--- a/package/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
++++ b/package/luci/themes/luci-theme-bootstrap/luasrc/view/themes/bootstrap/header.htm
 @@ -178,7 +178,7 @@
  		<header>
  			<div class="fill">
@@ -82,8 +82,8 @@ index 4881535..f58cef2 100644
  						<% render_changes() %>
 diff --git a/themes/luci-theme-material/luasrc/view/themes/material/header.htm b/themes/luci-theme-material/luasrc/view/themes/material/header.htm
 index 0aca882..328d452 100644
---- a/feeds/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
-+++ b/feeds/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
+--- a/package/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
++++ b/package/luci/themes/luci-theme-material/luasrc/view/themes/material/header.htm
 @@ -217,7 +217,7 @@
  <header>
  	<div class="container">
