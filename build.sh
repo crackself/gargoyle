@@ -27,13 +27,13 @@ set_version_variables()
 	#openwrt branch
 	branch_name="18.06"
 	branch_id="openwrt-18.06"
-	packages_branch="packages"
+	packages_branch="openwrt-18.06"
 
 
 	# set precise commit in repo to use 
 	# you can set this to an alternate commit 
 	# or empty to checkout latest 
-	openwrt_commit="6c075777d5afdeef7516e5125526b3f2c406f453"
+	openwrt_commit="55bbd8293c9f6e8f8814e0788df4ee9fb3671a09"
 	openwrt_abbrev_commit=$( echo "$openwrt_commit" | cut -b 1-7 )
 	
 
@@ -597,7 +597,7 @@ for target in $targets ; do
 	if [ "$target" = "custom" ] ; then
 		if [ ! -d "$openwrt_package_dir" ] ; then
 			
-			git clone https://github.com/openwrt/"$packages_branch".git "$openwrt_package_dir"
+			git clone https://github.com/openwrt/packages.git "$openwrt_package_dir"
 			cd "$openwrt_package_dir"
 			if [ -n "$packages_branch" ] ; then
 				git checkout "$packages_branch"
@@ -691,9 +691,10 @@ for target in $targets ; do
 		mkdir -p "$top_dir/Distribution/Images/$target-$default_profile"
 	fi
 
-	#copy packages to built/target directory
-	mkdir -p "$top_dir/built/$target/$default_profile"
-	package_base_dir=$(find bin -name "base")
+	#copy packages to build/target directory
+	pkg_arch=$(grep "CONFIG_TARGET_ARCH_PACKAGES" .config | sed 's/^.*="\(.*\)"/\1/g')
+	mkdir -p "$top_dir/built/$target/$profile_name"
+	package_base_dir=$(find "bin/packages/$pkg_arch" -name "base")
 	package_files=$(find "$package_base_dir" -name "*.ipk")
 	index_files=$(find "$package_base_dir" -name "Packa*")
 	if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
@@ -812,8 +813,9 @@ for target in $targets ; do
 		fi
 
 		#copy packages to build/target directory
+		pkg_arch=$(grep "CONFIG_TARGET_ARCH_PACKAGES" .config | sed 's/^.*="\(.*\)"/\1/g')
 		mkdir -p "$top_dir/built/$target/$profile_name"
-		package_base_dir=$(find bin -name "base")
+		package_base_dir=$(find "bin/packages/$pkg_arch" -name "base")
 		package_files=$(find "$package_base_dir" -name "*.ipk")
 		index_files=$(find "$package_base_dir" -name "Packa*")
 		if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
