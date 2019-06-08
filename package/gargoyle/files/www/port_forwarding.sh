@@ -6,19 +6,20 @@
 	# itself remain covered by the GPL.
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "firewall" -p "portforwarding" -c "internal.css" -j "gs_sortable.js port_forwarding.js table.js" -z "port.js" gargoyle -i firewall network dropbear upnpd
+	gargoyle_header_footer -h -s "firewall" -p "portforwarding" -j "gs_sortable.js port_forwarding.js table.js" -z "port.js" -i firewall gargoyle network dropbear upnpd
 %>
 
 <script>
 <!--
 <%
-	upnp_config_enabled=$(uci get upnpd.config.enable_upnp 2>/dev/null)
-	if [ -h /etc/rc.d/S95miniupnpd ] && [ -n "$upnp_config_enabled" ] && [ "$upnp_config_enabled" != "0" ] ; then
+	upnp_config_enabled=$(uci get upnpd.config.enabled 2>/dev/null)
+	have_miniupnpd=$(opkg list-installed | grep "miniupnpd" 2>/dev/null)
+	if [ -h /etc/rc.d/S94miniupnpd ] && [ -n "$upnp_config_enabled" ] && [ "$upnp_config_enabled" != "0" ] ; then
 		echo "var upnpdEnabled = true;"
 	else
 		echo "var upnpdEnabled = false;"
 	fi
-	if [ -z "$upnp_config_enabled" ] ; then
+	if [ -z "$have_miniupnpd" ] ; then
 		echo "var haveUpnpd = false;"
 	else
 		echo "var haveUpnpd = true;"
@@ -82,6 +83,7 @@
 			</div>
 
 			<div class="panel-body">
+				<div id="upnp_no_miniupnpd" class="alert alert-danger" role="alert" style="display: none;"><%~ NoMiniupnpdErr %></div>
 				<div id="upnp_enabled_container" class="row form-group">
 					<span class="col-xs-12">
 						<input type="checkbox" id="upnp_enabled" onclick="setUpnpEnabled()" />

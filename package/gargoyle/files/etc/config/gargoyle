@@ -16,23 +16,18 @@ config display display
 	option firewall_connlimits	'Connection Limits'
 	option firewall_restriction	'Restrictions'
 	option firewall_quotas		'Quotas'
-	option firewall_qosupload	'QoS (Upload)'
-	option firewall_qosdownload	'QoS (Download)'
 	option status			'Status'
 	option status_overview		'Overview'
 	option status_bandwidth		'Bandwidth Usage'
 	option status_bdist		'B/W Distribution'
 	option status_webmon		'Web Usage'
 	option status_quotause		'Quota Usage'
-	option status_qos		'QoS Distribution'
 	option status_hosts		'Connected Hosts'
 	option status_connections	'Connection List'
 	option connection		'Connection'
-	option connection_dyndns	'Dynamic DNS'
 	option connection_dhcp		'DHCP'
 	option connection_basic		'Basic'
 	option connection_routing	'Routing'
-	option connection_wol		'Wake on LAN'
 	option system			'System'
 	option system_access		'Router Access'
 	option system_ident		'Identification'
@@ -49,21 +44,16 @@ config scripts scripts
 	option firewall_connlimits	'connlimits.sh'
 	option firewall_restriction	'restriction.sh'
 	option firewall_quotas		'quotas.sh'
-	option firewall_qosupload	'qos_upload.sh'
-	option firewall_qosdownload	'qos_download.sh'
 	option status_overview		'overview.sh'
 	option status_bandwidth		'bandwidth.sh'
 	option status_bdist		'bandwidth_distribution.sh'
 	option status_quotause		'quota_usage.sh'
 	option status_webmon		'webmon.sh'
-	option status_qos		'qos_distribution.sh'
 	option status_hosts		'hosts.sh'
 	option status_connections	'conntrack.sh'
-	option connection_dyndns	'ddns.sh'
 	option connection_basic		'basic.sh'
 	option connection_dhcp		'dhcp.sh'
 	option connection_routing	'routing.sh'
-	option connection_wol		'wol.sh'
 	option system_access		'access.sh'
 	option system_ident		'identification.sh'
 	option system_time		'time.sh'
@@ -79,8 +69,6 @@ config 300 firewall
 	option connlimits	'115'
 	option restriction	'125'
 	option quotas		'175'
-	option qosupload	'200'
-	option qosdownload	'300'
 
 config 100 status
 	option overview		'100'
@@ -93,9 +81,7 @@ config 100 status
 config 200 connection
 	option basic	'100'
 	option dhcp	'200'
-	option dyndns	'300'
 	option routing	'400'
-	option wol	'500'
 
 config 400 system
 	option access	'100'
@@ -116,5 +102,5 @@ config bandwidth_display bandwidth_display
 #	option plot3_type "none"
 
 config help help
-	option ddns_1		1
+#	option ddns_1		1
 

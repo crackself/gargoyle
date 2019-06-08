@@ -6,7 +6,7 @@
 	# itself remain covered by the GPL.
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "system" -p "about" -c "internal.css" -j ""
+	gargoyle_header_footer -h -s "system" -p "about" -j ""
 %>
 
 <h1 class="page-header"><%~ about.CSect %></h1>
@@ -56,7 +56,7 @@
 				<h3 class="panel-title"><%~ LSect %></h3>
 			</div>
 			<div class="panel-body">
-				<h3>Gargoyle is copyright &copy; 2008-2016 by Eric Bishop</h3>
+				<h3>Gargoyle is copyright &copy; 2008-%CURYEAR by Eric Bishop</h3>
 
 				<p>Gargoyle is free software; you can redistribute it and/or modify it under the terms of the
 				<a href="http://www.gnu.org/licenses/gpl-2.0.html">GNU General Public License version 2.0</a>

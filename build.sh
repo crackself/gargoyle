@@ -25,15 +25,15 @@ set_version_variables()
 {
 
 	#openwrt branch
-	branch_name="Chaos Calmer"
-	branch_id="chaos_calmer"
-	packages_branch="for-15.05"
+	branch_name="18.06"
+	branch_id="openwrt-18.06"
+	packages_branch="openwrt-18.06"
 
 
 	# set precise commit in repo to use 
 	# you can set this to an alternate commit 
 	# or empty to checkout latest 
-	openwrt_commit="e6fbf31baae41b618ff333f3ae55ff032333bd6a"
+	openwrt_commit="ca8b4d684b57d7eee0329eae86d68ec5581615f7"
 	openwrt_abbrev_commit=$( echo "$openwrt_commit" | cut -b 1-7 )
 	
 
@@ -78,6 +78,17 @@ get_target_from_config()
 	cat .config | grep "^CONFIG_TARGET_BOARD=" | sed 's/\"$//g' | sed 's/^.*\"//g'
 }
 
+get_subtarget_from_config()
+{
+	config_file_path="$1"
+	cat .config | grep "^CONFIG_TARGET_SUBTARGET" | sed 's/^.*="\(.*\)"/\1/g'
+}
+
+get_pkg_arch_from_config()
+{
+	config_file_path="$1"
+	cat .config | grep "^CONFIG_TARGET_ARCH_PACKAGES" | sed 's/^.*="\(.*\)"/\1/g'
+}
 
 create_gargoyle_banner()
 {
@@ -274,9 +285,13 @@ num_build_thread_str=""
 if [ "$num_build_threads" = "single" ] ; then
 	num_build_threads="1"
 	num_build_thread_str="-j1"
-elif [ "$num_build_threads" = "" ] || [ "$num_build_threads" = "auto" ] ; then
-	num_build_threads="auto"
+elif [ "$num_build_threads" = "" ] || [ "$num_build_threads" = "unspecified" ] ; then
+	num_build_threads="unspecified"
 	num_build_thread_str=""
+elif [ "$num_build_threads" = "auto" ] ; then
+	num_cores=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null)
+	if [ -z "$num_cores" ] ; then num_cores=1 ; fi
+	num_build_threads=$(($num_cores + 2)) # more threads than cores, since each thread will sometimes block for i/o
 elif [ "$num_build_threads" -lt 1 ] ; then
 	num_build_threads="1"
 	num_build_thread_str="-j1"
@@ -344,7 +359,7 @@ if [ "$js_compress" = "true" ] || [ "$js_compress" = "TRUE" ] || [ "$js_compress
 			cd "$top_dir"
 			git clone git://github.com/nodejs/node.git
 			cd node
-			git checkout "$node_tag"
+			git checkout "$node_version_tag"
 			./configure 
 			make
 			mkdir bin
@@ -470,7 +485,7 @@ if [ ! -d "$openwrt_src_dir" ] ; then
 	echo "fetching openwrt source"
 	rm -rf "$branch_name" "$branch_id"
 
-	git clone  https://github.com/openwrt/$branch_id.git "$openwrt_src_dir"
+	git clone  https://github.com/openwrt/openwrt.git "$openwrt_src_dir"
 
 	if [ ! -d "$openwrt_src_dir" ] ; then
 		echo "ERROR: could not download source, exiting"
@@ -482,7 +497,6 @@ if [ ! -d "$openwrt_src_dir" ] ; then
 	fi
 
 	cd "$top_dir" 
-	mv "$branch_id" "$openwrt_src_dir"
 fi
 
 #download openwrt luci source if we haven't already
@@ -533,7 +547,7 @@ for target in $targets ; do
 			fi
 		done
 		IFS="$IFS_ORIG"
-		cp -r "$package_dir/$gp" "$target-src/package"
+		cp -pr "$package_dir/$gp" "$target-src/package"
 	done
 
 
@@ -641,6 +655,14 @@ for target in $targets ; do
 	rm .ver
 	mv .vermake "$top_dir/$target-src/package/gargoyle/Makefile"
 
+	#make prerequisites (mostly just mkhash we are interested in)
+	make prereq >/dev/null 2>&1
+	if [ -x "$top_dir/$target-src/staging_dir/host/bin/mkhash" ] ; then
+		export PATH=$PATH:"$top_dir/$target-src/staging_dir/host/bin"
+	else
+		echo "Couldn't find mkhash"
+	fi
+
 	#build, if verbosity is 0 dump most output to /dev/null, otherwise dump everything
 	if [ "$verbosity" = "0" ] ; then
 		scripts/patch-kernel.sh . "$patches_dir/" >/dev/null 2>&1
@@ -683,13 +705,13 @@ for target in $targets ; do
 		mkdir -p "$top_dir/Distribution/Images/$target-$default_profile"
 	fi
 
-	#copy packages to built/target directory
-	mkdir -p "$top_dir/built/$target/$default_profile"
-	package_base_dir=$(find bin -name "base")
+	#copy packages to build/target directory
+	pkg_arch=$(get_pkg_arch_from_config "./.config")
+	mkdir -p "$top_dir/built/$target/$profile_name"
+	package_base_dir=$(find "bin/packages/$pkg_arch" -name "base")
 	package_files=$(find "$package_base_dir" -name "*.ipk")
 	index_files=$(find "$package_base_dir" -name "Packa*")
 	if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
-
 		for pf in $package_files ; do
 			cp "$pf" "$top_dir/built/$target/$default_profile/"
 		done
@@ -697,31 +719,47 @@ for target in $targets ; do
 			cp "$inf" "$top_dir/built/$target/$default_profile/"
 		done
 	fi
+	#copy build specific packages to build/target specific directory
+	openwrt_target=$(get_target_from_config "./.config")
+	subtarget_arch=$(get_subtarget_from_config "./.config")
+	mkdir -p "$top_dir/built/$target/$profile_name"_kernelspecific
+	package_base_dir=$(find "bin/targets/$openwrt_target/$subtarget_arch" -name "packages")
+	package_files=$(find "$package_base_dir" -name "*.ipk")
+	index_files=$(find "$package_base_dir" -name "Packa*")
+	if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
+		for pf in $package_files ; do
+			cp "$pf" "$top_dir/built/$target/$default_profile"_kernelspecific/
+		done
+		for inf in $index_files ; do
+			cp "$inf" "$top_dir/built/$target/$default_profile"_kernelspecific/
+		done
+	fi
 	
 	#copy images to images/target directory
 	mkdir -p "$top_dir/images/$target"
-	arch=$(ls bin)
-	image_files=$(ls bin/$arch/ 2>/dev/null)
+	arch=$(ls bin/targets)
+	image_files=$(find "bin/targets/$arch/$subtarget_arch" 2>/dev/null)
 	if [ ! -e "$targets_dir/$target/profiles/$default_profile/profile_images"  ]  ; then 
 		for imf in $image_files ; do
-			if [ ! -d "bin/$arch/$imf" ] ; then
-				newname=$(echo "$imf" | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
-				cp "bin/$arch/$imf" "$top_dir/images/$target/$newname"
+			if [ ! -d "$imf" ] ; then
+				newname=$(echo "$imf" | sed 's/^.*\///g' | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
+				cp "$imf" "$top_dir/images/$target/$newname"
 				if [ "$distribution" = "true" ] ; then
-					cp "bin/$arch/$imf" "$top_dir/Distribution/Images/$target-$default_profile/$newname"
+					cp "$imf" "$top_dir/Distribution/Images/$target-$default_profile/$newname"
 				fi
 			fi
 		done
 	else
 		profile_images=$(cat "$targets_dir/$target/profiles/$default_profile/profile_images" 2>/dev/null)
 		for pi in $profile_images ; do
-			candidates=$(ls "bin/$arch/"*"$pi"* 2>/dev/null | sed 's/^.*\///g')
+			escaped_pi=$(echo $pi | sed 's/-/\\-/g')
+			candidates=$(find "bin/targets/$arch/$subtarget_arch/" 2>/dev/null | grep "$escaped_pi" )
 			for c in $candidates ; do
-				if [ ! -d "bin/$arch/$c" ] ; then
-					newname=$(echo "$c" | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
-					cp "bin/$arch/$c" "$top_dir/images/$target/$newname"
+				if [ ! -d "$c" ] ; then
+					newname=$(echo "$c" | sed 's/^.*\///g' | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
+					cp "$c" "$top_dir/images/$target/$newname"
 					if [ "$distribution" = "true" ] ; then
-						cp "bin/$arch/$c" "$top_dir/Distribution/Images/$target-$default_profile/$newname"
+						cp "$c" "$top_dir/Distribution/Images/$target-$default_profile/$newname"
 					fi
 				fi
 			done
@@ -745,11 +783,22 @@ for target in $targets ; do
 	if [ "$target" != "custom" ] && [ -z "$specified_profile" ] ; then
 		other_profiles=$(ls "$targets_dir/$target/profiles" | grep -v "^$default_profile$" )
 	fi
+
 	for profile_name in $other_profiles ; do
-
-
 		#copy profile config and rebuild
 		cp "$targets_dir/$target/profiles/$profile_name/config" .config
+		#clean out old bin folder to prevent contamination between profiles
+		arch=$(ls bin/targets)
+		profile_images=$(cat "$targets_dir/$target/profiles/$profile_name/profile_images" 2>/dev/null)
+		for pi in $profile_images ; do
+			escaped_pi=$(echo $pi | sed 's/-/\\-/g')
+			candidates=$(find "bin/targets/$arch/" 2>/dev/null | grep "$escaped_pi" )
+			for c in $candidates ; do
+				if [ ! -d "$c" ] ; then
+					rm "$c"
+				fi
+			done
+		done
 		
 		
 		[ ! -z $(which python 2>&1) ] && {
@@ -785,17 +834,16 @@ for target in $targets ; do
 			make $num_build_thread_str V=99 GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$profile_name"
 		fi
 
-
 		#if we didn't build anything, die horribly
-		image_files=$(ls "bin/$arch/" 2>/dev/null)	
+		image_files=$(find "bin/targets/$arch/" 2>/dev/null)
 		if [ -z "$image_files" ] ; then
 			exit
 		fi
 
 		#copy packages to build/target directory
+		pkg_arch=$(get_pkg_arch_from_config "./.config")
 		mkdir -p "$top_dir/built/$target/$profile_name"
-		arch=$(ls bin)
-		package_base_dir=$(find bin -name "base")
+		package_base_dir=$(find "bin/packages/$pkg_arch" -name "base")
 		package_files=$(find "$package_base_dir" -name "*.ipk")
 		index_files=$(find "$package_base_dir" -name "Packa*")
 		if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
@@ -806,7 +854,21 @@ for target in $targets ; do
 				cp "$inf" "$top_dir/built/$target/$profile_name/"
 			done
 		fi
-
+		#copy build specific packages to build/target specific directory
+		openwrt_target=$(get_target_from_config "./.config")
+		subtarget_arch=$(get_subtarget_from_config "./.config")
+		mkdir -p "$top_dir/built/$target/$profile_name"_kernelspecific
+		package_base_dir=$(find "bin/targets/$openwrt_target/$subtarget_arch" -name "packages")
+		package_files=$(find "$package_base_dir" -name "*.ipk")
+		index_files=$(find "$package_base_dir" -name "Packa*")
+		if [ -n "$package_files" ] && [ -n "$index_files" ] ; then
+			for pf in $package_files ; do
+				cp "$pf" "$top_dir/built/$target/$profile_name"_kernelspecific/
+			done
+			for inf in $index_files ; do
+				cp "$inf" "$top_dir/built/$target/$profile_name"_kernelspecific/
+			done
+		fi
 
 
 	
@@ -816,18 +878,21 @@ for target in $targets ; do
 
 
 		#copy relevant images for which this profile applies
+		arch=$(ls bin/targets)
 		profile_images=$(cat "$targets_dir/$target/profiles/$profile_name/profile_images" 2>/dev/null)
 		for pi in $profile_images ; do
-			candidates=$(ls "bin/$arch/"*"$pi"* 2>/dev/null | sed 's/^.*\///g')
+			escaped_pi=$(echo $pi | sed 's/-/\\-/g')
+			candidates=$(find "bin/targets/$arch/$subtarget_arch/" 2>/dev/null | grep "$escaped_pi" )
 			for c in $candidates ; do
-				if [ ! -d "bin/$arch/$c" ] ; then
-					newname=$(echo "$c" | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
-					cp "bin/$arch/$c" "$top_dir/images/$target/$newname"
+				if [ ! -d "$c" ] ; then
+					newname=$(echo "$c" | sed 's/^.*\///g' | sed "s/openwrt/gargoyle_$lower_short_gargoyle_version/g")
+					cp "$c" "$top_dir/images/$target/$newname"
 					if [ "$distribution" = "true" ] ; then
-						cp "bin/$arch/$c" "$top_dir/Distribution/Images/$target-$profile_name/$newname"
+						cp "$c" "$top_dir/Distribution/Images/$target-$default_profile/$newname"
 					fi
 				fi
 			done
+
 		done
 		if [ "$distribution" = "true" ] ; then
 			#Generate licenses file for each profile

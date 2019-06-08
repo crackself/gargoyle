@@ -7,7 +7,7 @@
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "status" -p "overview" -c "internal.css" -j "overview.js table.js" -z "overview.js" -i network wireless qos_gargoyle system gargoyle
+	gargoyle_header_footer -h -s "status" -p "overview" -j "overview.js table.js" -z "overview.js" -i network wireless qos_gargoyle system gargoyle
 %>
 
 <script>
@@ -135,7 +135,7 @@
 					<li class="list-group-item"><span class="list-group-item-title"><%~ WMAdd %>:</span><span id="wan_mac"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ WGtwy %>:</span><span id="wan_gateway"></span></li>
 					<li id="wan_dns_container" class="list-group-item"><span class="list-group-item-title"><%~ WDNS %>:</span><span id="wan_dns"></span></li>
-					<li id="wan_pppoe_container"class="list-group-item"><span class="list-group-item-title"><%~ WUptm %>:</span><span id="wan_pppoe_uptime"></span></li>
+					<li id="wan_pppoe_container" class="list-group-item"><span class="list-group-item-title"><%~ WUptm %>:</span><span id="wan_pppoe_uptime"></span></li>
 					<li id="wan_3g_container" class="list-group-item"><span class="list-group-item-title"><%~ W3GSS %>:</span><span id="wan_3g"></span></li>
 				</ul>
 			</div>
@@ -151,7 +151,7 @@
 			</div>
 
 			<div class="panel-body">
-				<ul class="list-group">
+				<ul id="lan_list_group" class="list-group">
 					<li class="list-group-item"><span class="list-group-item-title"><%~ LIPA %>:</span><span id="lan_ip"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ LNmsk %>:</span><span id="lan_mask"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ LMAdd %>:</span><span id="lan_mac"></span></li>

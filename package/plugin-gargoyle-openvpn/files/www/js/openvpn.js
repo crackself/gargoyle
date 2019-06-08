@@ -28,15 +28,9 @@ function saveChanges()
 		{
 			if(enabled)
 			{
-				uci.set("network", "vpn", "",             "interface")
-				uci.set("network", "vpn", "ifname",       "tun0")
-				uci.set("network", "vpn", "proto",        "none")
-				uci.set("network", "vpn", "defaultroute", "0")
-				uci.set("network", "vpn", "peerdns",      "0")
-
 				uci.set("firewall", "vpn_zone", "",        "zone")
 				uci.set("firewall", "vpn_zone", "name",    "vpn")
-				uci.set("firewall", "vpn_zone", "network", "vpn")
+				uci.set("firewall", "vpn_zone", "device", "tun0")
 				uci.set("firewall", "vpn_zone", "input",   "ACCEPT")
 				uci.set("firewall", "vpn_zone", "output",  "ACCEPT")
 				uci.set("firewall", "vpn_zone", "forward", "ACCEPT")
@@ -80,13 +74,11 @@ function saveChanges()
 			}
 			else
 			{
-				uci.removeSection("network",  "vpn")
 				uci.removeSection("firewall", "vpn_zone")
 				uci.removeSection("firewall", "lan_vpn_forwarding")
 				uci.removeSection("firewall", "vpn_lan_forwarding")
 				uci.removeSection("firewall", "vpn_wan_forwarding")
 				uci.removeSection("firewall", "ra_openvpn")
-
 			}
 		}
 
@@ -168,17 +160,7 @@ function saveChanges()
 
 			
 			var cipher = getSelectedValue(prefix + "cipher")
-			if(cipher.match(/:/))
-			{
-				var cipherParts = cipher.split(/:/)
-				cipher = cipherParts[0]
-				var keysize = cipherParts[1]
-				uci.set("openvpn_gargoyle", "server", "keysize", keysize)
-			}
-			else
-			{
-				uci.remove("openvpn_gargoyle", "server", "keysize")
-			}
+			uci.remove("openvpn_gargoyle", "server", "keysize")	//Leave in to ensure option is removed. Deprecated in Openvpn 2.4
 			uci.set("openvpn_gargoyle", "server", "cipher", cipher);
 		}
 		if(openvpnConfig == "client")
@@ -427,13 +409,10 @@ function resetData()
 
 	
 	var serverCipher  = uciOriginal.get("openvpn_gargoyle", "server", "cipher")
-	var serverKeysize = uciOriginal.get("openvpn_gargoyle", "server", "keysize")
 	if(serverCipher == "")
 	{
 		serverCipher = "AES-256-CBC"
-		serverKeysize = ""
 	}
-	serverCipher = serverKeysize == "" ? serverCipher : serverCipher + ":" + serverKeysize
 
 	setSelectedValue("openvpn_server_protocol", getServerVarWithDefault("proto", "udp"))
 	setSelectedValue("openvpn_server_cipher", serverCipher)
@@ -543,7 +522,6 @@ function updateClientControlsFromConfigText()
 	var port         = null;
 	var proto        = null;
 	var cipher       = null;
-	var keysize      = null;
 	var taDirection = null;
 
 	var portFrom = "undefined";
@@ -580,10 +558,6 @@ function updateClientControlsFromConfigText()
 		{
 			cipher = lineParts[1] != null ? lineParts[1] : cipher;
 		}
-		else if(lineParts[0].toLowerCase() == "keysize")
-		{
-			keysize = lineParts[1] != null ? lineParts[1] : keysize;
-		}
 		else if(lineParts[0].toLowerCase() == "tls-auth")
 		{
 			taDirection = lineParts[2] != null ? lineParts[2] : "";
@@ -604,12 +578,7 @@ function updateClientControlsFromConfigText()
 	}
 	if(cipher != null)
 	{
-		if(cipher == "BF-CBC" && (keysize == "128" || keysize == "256" || keysize == null))
-		{
-			keysize = keysize == null ? "128" : keysize
-			setSelectedValue("openvpn_client_cipher", cipher + ":" + keysize)
-		}
-		else if(cipher == "AES-128-CBC" || cipher == "AES-256-CBC")
+		if(cipher == "AES-128-CBC" || cipher == "AES-256-CBC" || cipher == "AES-128-GCM" || cipher == "AES-256-GCM")
 		{
 			setSelectedValue("openvpn_client_cipher", cipher)
 		}
@@ -617,7 +586,6 @@ function updateClientControlsFromConfigText()
 		{
 			setSelectedValue("openvpn_client_cipher", "other")
 			document.getElementById("openvpn_client_cipher_other").value = cipher
-			document.getElementById("openvpn_client_key_other").value = keysize == null ? "" : keysize
 		}
 	}
 	if(taDirection != null)
@@ -640,13 +608,9 @@ function updateClientConfigTextFromControls()
 	var cipher      = getSelectedValue("openvpn_client_cipher");
 	var taDirection = getSelectedValue("openvpn_client_ta_direction") == "1" ? " 1" : ""
 	
-	var cipherParts = cipher.split(/:/);
-	cipher = cipherParts[0];
-	var keysize = cipherParts[1] == null ? "" : cipherParts[1];
 	if(cipher == "other")
 	{
 		cipher  = document.getElementById("openvpn_client_cipher_other").value;
-	       	keysize = document.getElementById("openvpn_client_cipher_other").value;
 	}
 
 	var configLines = document.getElementById("openvpn_client_conf_text").value.split(/[\r\n]+/);
@@ -672,11 +636,6 @@ function updateClientConfigTextFromControls()
 			line = "cipher " + cipher
 			foundVars["cipher"] = 1
 		}
-		else if(lineParts[0].toLowerCase() == "keysize")
-		{
-			line = keysize == "" ? "" : "keysize " + keysize
-			foundVars["keysize"] = 1
-		}
 		else if(lineParts[0].toLowerCase() == "rport" || lineParts[0].toLowerCase() == "port" )
 		{
 			//specify port in remote line instead of with these directives, so get rid of these lines
@@ -698,10 +657,6 @@ function updateClientConfigTextFromControls()
 		newLines.push(line)
 	}
 
-	if(foundVars["keysize"] == null && keysize != "" && (!(defaultCipher && foundVars["cipher"] == null)) )
-	{
-		newLines.unshift("keysize " + keysize )
-	}
 	if(foundVars["cipher"] == null && (!defaultCipher) )
 	{
 		newLines.unshift("cipher " + cipher);
@@ -905,7 +860,7 @@ function setRemoteNames( controlDocument, selectedRemote)
 	for(ddi=0; ddi < definedDdns.length; ddi++)
 	{
 		var enabled = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "enabled")
-		var domain  = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "domain")
+		var domain  = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "domain").replace("@",".")
 		if( (enabled != "0" && enabled != "false") && domain != "")
 		{
 			names.push(ovpnS.DDNS+": " + domain)
@@ -1101,6 +1056,11 @@ function setAcUciFromDocument(controlDocument, id)
 	{
 		uci.set(pkg, id, "subnet_ip",   subnetIp)
 		uci.set(pkg, id, "subnet_mask", subnetMask)
+	}
+	else
+	{
+		uci.remove(pkg, id, "subnet_ip")
+		uci.remove(pkg, id, "subnet_mask")
 	}
 	uci.set(pkg, id, "prefer_vpngateway", prefer_vpngateway)
 }

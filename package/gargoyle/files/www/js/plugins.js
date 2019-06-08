@@ -103,6 +103,21 @@ function updatePluginRootDisplay()
 	var pluginRootDrive = getSelectedValue("plugin_root_drive_select");
 	document.getElementById("plugin_root_static").style.display = pluginRootDrive == "root" ? "block" : "none";
 	document.getElementById("plugin_root_text").style.display   = pluginRootDrive == "root" ? "none"  : "block";
+
+	var newRootFormat = "internal";
+	if (pluginRootDrive.localeCompare('root') != 0)
+	{
+		var driveIndex;
+		for(driveIndex=0;driveIndex < storageDrives.length; driveIndex++)
+		{
+			if (storageDrives[driveIndex][0].localeCompare(pluginRootDrive) == 0)
+			{
+				newRootFormat = storageDrives[driveIndex][3];
+			}
+		}
+	}
+	document.getElementById("plugin_root_incompatible").style.display = newRootFormat.match(/FAT/gi) == null ? "none" : "block";
+	document.getElementById("btn_plugin_root_change").style.display = newRootFormat.match(/FAT/gi) == null ? "block" : "none";
 }
 
 function changePluginRoot()
@@ -409,7 +424,7 @@ function resetData()
 		}
 	}
 
-	document.getElementById("wan-warn").style.display = currentWanIp=="" ? "inline" : "none";
+	document.getElementById("wan-warn").style.display = connectivity == "" ? "block" : "none";
 }
 
 function installPackage()

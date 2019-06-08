@@ -7,7 +7,7 @@
 	# itself remain covered by the GPL.
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "system" -p "plugins" -c "internal.css" -j "table.js plugins.js" -z "plugins.js" -i gargoyle
+	gargoyle_header_footer -h -s "system" -p "plugins" -j "table.js plugins.js" -z "plugins.js" -i gargoyle
 %>
 <script>
 
@@ -39,7 +39,9 @@
 	echo "var storageDrives = [];"
 	awk '{ print "storageDrives.push([\""$1"\",\""$2"\",\""$3"\",\""$4"\", \""$5"\", \""$6"\"]);" }' /tmp/mounted_usb_storage.tab 2>/dev/null
 
-    du -s $plugin_root_dest | awk '{ print "var pluginRootSize="$1*1000";" }' 2>/dev/null
+	du -s $plugin_root_dest | awk '{ print "var pluginRootSize="$1*1000";" }' 2>/dev/null
+
+	echo "var connectivity = \""$(traceroute -n -I -w 1 -q 2 -m6 8.8.8.8 2>&1 | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}.*ms' | grep -vE '^(192\.168|10\.|172\.1[6789]\.|172\.2[0-9]\.|172\.3[01]\.|0\.0\.0\.0|127\.|255\.)')"\";"
 %>
 
 </script>
@@ -68,7 +70,8 @@
 							</div>
 
 							<div id="plugin_root_change_container" class="row form-group" style="display:none" >
-								<span class="col-xs-12"><button class="btn btn-default" onclick="changePluginRoot()"><%~ Chroot %></button></span>
+								<div class="alert alert-danger" role="alert" id="plugin_root_incompatible" style="display:none"><%~ Prootincompat %></div>
+								<span class="col-xs-12"><button class="btn btn-default" id="btn_plugin_root_change" onclick="changePluginRoot()"><%~ Chroot %></button></span>
 							</div>
 						</div>
 					</div>

@@ -6,7 +6,7 @@
 	# itself remain covered by the GPL.
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "connection" -p "basic" -c "internal.css" -j "basic.js table.js" -z "basic.js" -i gargoyle network wireless dhcp firewall
+	gargoyle_header_footer -h -s "connection" -p "basic" -j "basic.js table.js" -z "basic.js" -i gargoyle network wireless dhcp firewall
 %>
 
 <script>
@@ -73,6 +73,13 @@
 	else
 		echo "cdcif = \"$cdcif\";"
 	fi
+
+	echo "var countryLines = new Array();"
+	if [ -e ./data/countrylist.txt ] ; then
+		awk '{gsub(/"/, "\\\""); print "countryLines.push(\""$0"\");"}' ./data/countrylist.txt	
+	fi
+	echo "var countryData = parseCountry(countryLines);"
+
 %>
 var timezoneOffset = (parseInt(timezoneOffStr.substr(0,3),10)*60+parseInt(timezoneOffStr.substr(3,2),10))*60;
 
@@ -130,7 +137,7 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					<label class="col-xs-5" for="bridge_ip" id="bridge_ip_label"><%~ BrIP %>:</label>
 					<span class="col-xs-7">
 						<input type="text" class="form-control" name="bridge_ip" id="bridge_ip" onkeyup="proofreadIp(this)" size="20" maxlength="15" />
-						<em><%~ BrNote %></em>
+						<em id="bridge_note"><%~ BrNoteClient %></em>
 					</span>
 				</div>
 
@@ -324,6 +331,7 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					<span class="col-xs-7">
 						<select id="bridge_channel_5ghz" class="form-control" onchange="setChannel(this)" ></select>
 					</span>
+					<span class="alert alert-warning col-xs-12" role="alert" id="bridge_channel_5ghz_dfs"><%~ DFSWarning %></span>
 				</div>
 
 				<div id="bridge_fixed_channel_container" class="row form-group">
@@ -378,6 +386,15 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					</span>
 				</div>
 
+				<div id="bridge_wireless_country_container" class="row form-group">
+					<span class="alert alert-warning col-xs-12" role="alert"><%~ WifiCountryWarning %></span>
+					<label class="col-xs-5" for="bridge_wireless_country"><%~ WifiCountry %>:</label>
+					<div class="col-xs-7">
+						<select class="form-control" id="bridge_wireless_country" onchange="syncWifiCountrySelection(this)">
+							<option value="00">World (Default)</option>
+						</select>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -614,9 +631,6 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 							<option value="opendns"><%~ OpnSrvs %></option>
 							<option value="google"><%~ GooSrvs %></option>
 							<option value="opendnsfs"><%~ OpnSrvsFS %></option>
-							<option value="nortoncsa"><%~ NrtnCSA %></option>
-							<option value="nortoncsb"><%~ NrtnCSB %></option>
-							<option value="nortoncsc"><%~ NrtnCSC %></option>
 							<option value="quad9"><%~ Quad9 %></option>
 							<option value="custom"><%~ CstDSrv %></option>
 						</select>
@@ -776,6 +790,16 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					</div>
 				</div>
 
+				<div id="wireless_country_container" class="row form-group">
+					<span class="alert alert-warning col-xs-12" role="alert"><%~ WifiCountryWarning %></span>
+					<label class="col-xs-5" for="wireless_country"><%~ WifiCountry %>:</label>
+					<div class="col-xs-7">
+						<select class="form-control" id="wireless_country" onchange="syncWifiCountrySelection(this)">
+							<option value="00">World (Default)</option>
+						</select>
+					</div>
+				</div>
+
 				<div id="internal_divider1" class="internal_divider"></div>
 
 				<div id="wifi_list_ssid2_container" class="row form-group">
@@ -842,6 +866,7 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 				<div id="wifi_channel2_5ghz_container" class="row indent">
 					<label class="col-xs-5" for="wifi_channel2_5ghz" id="wifi_channel2_5ghz_label"><%~ WChn %>:</label>
 					<span class="col-xs-7"><select class="form-control" id="wifi_channel2_5ghz" onchange="setChannel(this)" ></select></span>
+					<span class="alert alert-warning col-xs-12" role="alert" id="wifi_channel2_5ghz_dfs"><%~ DFSWarning %></span>
 				</div>
 
 				<div id="wifi_encryption2_container" class="row indent">
@@ -926,6 +951,7 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					<span class="col-xs-7" >
 						<select class="form-control" id="wifi_channel1_5ghz" onchange="setChannel(this)" ></select>
 					</span>
+					<span class="alert alert-warning col-xs-12" role="alert" id="wifi_channel1_5ghz_dfs"><%~ DFSWarning %></span>
 				</div>
 
 				<div id="wifi_encryption1_container" class="row indent">

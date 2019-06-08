@@ -7,7 +7,7 @@ PKG_VERSION:=$(GARGOYLE_VERSION)
 ifeq ($(GARGOYLE_VERSION),)
      PKG_VERSION:=1.0.0
 endif
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 
 ATH_DEPS=
 LED_DEPS=
@@ -30,7 +30,7 @@ define Package/gargoyle
 	SECTION:=admin
 	CATEGORY:=Administration
 	TITLE:=Gargoyle Web Interface
-	DEPENDS:=+uci +libuci +haserl-i18n +uhttpd +uhttpd-mod-tls +libustream-polarssl +qos-gargoyle +bwmon-gargoyle +ddns-gargoyle +webmon-gargoyle +gargoyle-firewall-util +libericstools +wol +gpkg  $(ATH_DEPS) $(BRCM_DEPS) $(LED_DEPS)
+	DEPENDS:=+uci +libuci +haserl-i18n +uhttpd +libustream-openssl +bwmon-gargoyle +webmon-gargoyle +gargoyle-firewall-util +libericstools +gpkg +gargoyle-ip-query  $(ATH_DEPS) $(BRCM_DEPS) $(LED_DEPS)
 	MAINTAINER:=Eric Bishop <eric@gargoyle-router.com>
 endef
 
@@ -68,6 +68,7 @@ define Package/gargoyle/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gargoyle_header_footer $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/gargoyle_session_validator $(1)/usr/bin
+	$(SED) 's,%CURYEAR,$(shell date -u +%Y),g' $(1)/www/about.sh
 endef
 
 

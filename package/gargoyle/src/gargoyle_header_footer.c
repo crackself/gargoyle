@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <mntent.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -57,6 +58,7 @@ string_map* get_hostnames(void);
 char* get_option_value_string(struct uci_option* uopt);
 int get_uci_option(struct uci_context* ctx, struct uci_element** e, struct uci_package *p, char* package_name, char* section_name, char* option_name);
 char** ParseGHF_TranslationStrings(char* web_root, char* active_lang, char* fallback_lang);
+bool is_unusable_overlayfs(void);
 
 
 
@@ -75,6 +77,7 @@ int main(int argc, char **argv)
 	char* desc = "Router Management Utility";
 	char* dname = "Device Name";
 	char* wait_txt = "Please Wait While Settings Are Applied";
+	char* unusable_overlay = "Router storage full (read only) or is mounted in volatile storage (RAM). It will not function correctly, or will revert to a previous state after rebooting. Restore default configuration or flash new firmware (without preserving settings).";
 	char** package_variables_to_load = NULL;
 	int c;
 
@@ -220,6 +223,8 @@ int main(int argc, char **argv)
 		char* fallback_lang = "";
 		char* active_lang = "";
 		char* test_theme = "";
+		char* selected_section_page = "";
+		char* page_subtitle = "";
 		char** translation_strings = NULL;
 
 
@@ -304,13 +309,19 @@ int main(int argc, char **argv)
 		}
 #endif
 
+		selected_section_page = dynamic_strcat(3, selected_section, "_", selected_page);
+		if(get_uci_option(ctx, &e, p, "gargoyle", "display", selected_section_page) == UCI_OK)
+		{
+			page_subtitle = dynamic_strcat(2, " - ", get_option_value_string(uci_to_option(e)));
+		}
+
 		printf("<!DOCTYPE html>\n"
 			   "<head>\n"
 			   "\t<meta charset=\"utf-8\">\n"
 			   "\t<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n"
 			   "\t<meta name=\"description\" content=\"Gargoyle Firmware Webgui for router management.\">\n"
 			   "\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-			   "\t<title>%s</title>\n", translation_strings == NULL ? title : translation_strings[0]);
+			   "\t<title>%s%s</title>\n", translation_strings == NULL ? title : translation_strings[0], page_subtitle);
 		test_theme = dynamic_strcat(5, web_root, theme_root, "/", theme, "/images/favicon.png");
 		//if the theme includes this file, use it, otherwise fallback to default gargoyle file
 		if (path_exists(test_theme) == PATH_IS_REGULAR_FILE || path_exists(test_theme) == PATH_IS_SYMLINK)
@@ -321,6 +332,17 @@ int main(int argc, char **argv)
 		{
 			printf("\t<link rel=\"shortcut icon\" href=\"%s/Gargoyle/images/favicon.png\"/>\n", theme_root);
 		}
+		test_theme = dynamic_strcat(5, web_root, theme_root, "/", theme, "/bootstrap.min.css");
+		//if the theme includes this file, use it, otherwise fallback to default gargoyle file
+		if (path_exists(test_theme) == PATH_IS_REGULAR_FILE || path_exists(test_theme) == PATH_IS_SYMLINK)
+		{
+			printf("\t<link rel=\"stylesheet\" href=\"%s/%s/bootstrap.min.css?%s\">\n", theme_root, theme, gargoyle_version);
+		}
+		else
+		{
+			printf("\t<link rel=\"stylesheet\" href=\"%s/Gargoyle/bootstrap.min.css?%s\">\n", theme_root, gargoyle_version);
+		}
+
 		int css_index, js_index, lstr_js_index;
 		for(css_index=0; all_css[css_index] != NULL; css_index++)
 		{
@@ -335,6 +357,8 @@ int main(int argc, char **argv)
 				printf("\t<link rel=\"stylesheet\" href=\"%s/Gargoyle/%s?%s\"/>\n", theme_root, all_css[css_index], gargoyle_version);
 			}
 		}
+		//We won't test if this theme.css doesn't exist because each theme must now at a minimum include this file
+		printf("\t<link rel=\"stylesheet\" href=\"%s/%s/theme.css?%s\">\n", theme_root, theme, gargoyle_version);
 		for(js_index=0; all_js[js_index] != NULL; js_index++)
 		{
 			printf("\t<script src=\"%s/%s?%s\"></script>\n", js_root, all_js[js_index], gargoyle_version);
@@ -367,18 +391,6 @@ int main(int argc, char **argv)
 			printf("\t<script src=\"%s/%s/theme.js?%s\"></script>\n", theme_root, theme, gargoyle_version);
 		}
 
-		test_theme = dynamic_strcat(5, web_root, theme_root, "/", theme, "/bootstrap.min.css");
-		//if the theme includes this file, use it, otherwise fallback to default gargoyle file
-		if (path_exists(test_theme) == PATH_IS_REGULAR_FILE || path_exists(test_theme) == PATH_IS_SYMLINK)
-		{
-			printf("\t<link rel=\"stylesheet\" href=\"%s/%s/bootstrap.min.css?%s\">\n", theme_root, theme, gargoyle_version);
-		}
-		else
-		{
-			printf("\t<link rel=\"stylesheet\" href=\"%s/Gargoyle/bootstrap.min.css?%s\">\n", theme_root, gargoyle_version);
-		}
-		//We won't test if this theme.css doesn't exist because each theme must now at a minimum include this file
-		printf("\t<link rel=\"stylesheet\" href=\"%s/%s/theme.css?%s\">\n", theme_root, theme, gargoyle_version);
 		printf("</head>\n"
 			   "<body>\n");
 		if(display_type == HEADER)
@@ -421,7 +433,8 @@ int main(int argc, char **argv)
 				   "\t\t\t\t\t</div>\n"//container-fluid end
 				   "\t\t\t\t</div>\n"//topnavbar end
 				   "\t\t\t\t<div class=\"row\">\n"
-				   "\t\t\t\t\t<div class=\"col-lg-12\">\n");
+				   "\t\t\t\t\t<div class=\"col-lg-12\">\n"
+				   "\t\t\t\t\t\t<div class=\"alert alert-danger\" style=\"display:%s;\">%s</div>\n",is_unusable_overlayfs() ? "block" : "none", translation_strings == NULL ? unusable_overlay : translation_strings[4]);
 		}
 
 		printf("<script>\n");
@@ -932,6 +945,10 @@ void print_interface_vars(void)
         if(uci_load(ctx, "network", &p) == UCI_OK)
         {
                 if(get_uci_option(ctx, &e, p, "network", "wan", "macaddr") == UCI_OK)
+                {
+                        uci_wan_mac=get_option_value_string(uci_to_option(e));
+                }
+                else if(get_uci_option(ctx, &e, p, "network", "wan_dev", "macaddr") == UCI_OK)
                 {
                         uci_wan_mac=get_option_value_string(uci_to_option(e));
                 }
@@ -1496,6 +1513,30 @@ string_map* get_hostnames(void)
 
 }
 
+bool is_unusable_overlayfs(void)
+{
+	FILE* procmounts = setmntent("/proc/mounts", "r");
+	if(!procmounts)
+	{
+		return false;
+	}
+	struct mntent* mnt_p;
+	
+	while (mnt_p = getmntent(procmounts))
+	{
+		if(strstr(mnt_p->mnt_fsname, "overlayfs") != NULL)
+		{
+			if(strstr(mnt_p->mnt_fsname, "/tmp/root") != NULL || strstr(mnt_p->mnt_opts, "ro,") != NULL)
+			{
+				endmntent(procmounts);
+				return true;
+			}
+		}
+	}
+	endmntent(procmounts);
+	return false;
+}
+
 
 
 #ifdef UCI_OLD_VERSION //valid for uci version 0.3.3 for kamikaze 7.09
@@ -1592,12 +1633,13 @@ char** ParseGHF_TranslationStrings(char* web_root, char* active_lang, char* fall
         return NULL;
 #else
         unsigned char ghf_idx=0;
-        char** GHFstrings = (char**)calloc(5, sizeof(char*));         //4 strings + emptyval
+        char** GHFstrings = (char**)calloc(6, sizeof(char*));         //5 strings + emptyval
         //same order as in file:
         //index=0: ghf.title="Gargoyle Router Management Utility";
         //index=1: ghf.desc="Router<br/>Management<br/>Utility";
         //index=2: ghf.devn="Device Name";
         //index=3: ghf.waits="Please Wait While Settings Are Applied";
+	//index=4: ghf.badoverlay="Router storage full (read only) or is mounted in volatile storage (RAM). It will not function correctly, or will revert to a previous state after rebooting. Restore default configuration or flash new firmware (without preserving settings).";
         char* ghfs_path = dynamic_strcat(4, web_root, "/i18n/", active_lang, "/ghf.js");
 
         if (path_exists(ghfs_path) == PATH_IS_REGULAR_FILE || path_exists(ghfs_path) == PATH_IS_SYMLINK )
@@ -1612,7 +1654,7 @@ char** ParseGHF_TranslationStrings(char* web_root, char* active_lang, char* fall
                         for (ghf_line=0; ghf_line < num_lines; ghf_line++)
                         {
                                 char* this_line = ghf_js_lines[ghf_line];
-                                unsigned char idx, start_str, end_str = 0;
+                                unsigned short idx, start_str, end_str = 0;
 
                                 for (idx=0; idx < strlen(this_line); idx++)
                                 {

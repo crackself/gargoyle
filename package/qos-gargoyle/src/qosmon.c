@@ -19,7 +19,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
 */
-
+#define _GNU_SOURCE 1
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,13 +61,18 @@
 //RTNL_FAMILY_MAX to tell us that we are linking against a version of iproute2 
 //after then and define dump_filter and talk accordingly.
 #ifdef RTNL_FAMILY_MAX
-#define dump_filter(a,b,c) rtnl_dump_filter(a,b,c)
-#define talk(a,b,c,d,e) rtnl_talk(a,b,c,d,e)
+  #define dump_filter(a,b,c) rtnl_dump_filter(a,b,c)
+  #ifdef IFLA_STATS_RTA
+    #define talk(a,b,c) rtnl_talk(a,b,c)
+  #else
+    #define talk(a,b,c,d,e) rtnl_talk(a,b,c,NULL,NULL)
+  #endif
 #else
 #define dump_filter(a,b,c) rtnl_dump_filter(a,b,c,NULL,NULL)
-#define talk(a,b,c,d,e) rtnl_talk(a,b,c,d,e,NULL,NULL)
+#define talk(a,b,c,d,e) rtnl_talk(a,b,c,NULL,NULL,NULL,NULL)
 #endif
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 /* use_names is required when linking to tc_util.o */
 bool use_names = false;
@@ -88,7 +93,7 @@ struct sockaddr_in whereto;/* Who to ping */
 int datalen=64-8;   /* How much data */
 
 const char usage[] =
-"Gargoyle active congestion controller version 2.3\n\n"
+"Gargoyle active congestion controller version 2.4\n\n"
 "Usage:  qosmon [options] pingtime pingtarget bandwidth [pinglimit]\n" 
 "              pingtime   - The ping interval the monitor will use when active in ms.\n"
 "              pingtarget - The URL or IP address of the target host for the monitor.\n"
@@ -630,7 +635,7 @@ int tc_class_modify(__u32 rate)
     }
 
 
-    if (talk(&rth, &req.n, 0, 0, NULL) < 0)
+    if (talk(&rth, &req.n, NULL) < 0)
         return 2;
 
     return 0;
@@ -855,14 +860,14 @@ int main(int argc, char *argv[])
         signal( SIGUSR2, SIG_IGN );
         signal( SIGHUP,  SIG_IGN );
         signal( SIGTSTP, SIG_IGN );
-        signal( SIGPIPE, (__sighandler_t) finish );
-        signal( SIGSEGV, (__sighandler_t) finish );
-        signal( SIGILL, (__sighandler_t) finish );
-        signal( SIGFPE, (__sighandler_t) finish );
-        signal( SIGSYS, (__sighandler_t) finish );
-        signal( SIGURG, (__sighandler_t) finish );
-        signal( SIGTTIN, (__sighandler_t) finish );
-        signal( SIGTTOU, (__sighandler_t) finish );
+        signal( SIGPIPE, (sighandler_t) finish );
+        signal( SIGSEGV, (sighandler_t) finish );
+        signal( SIGILL, (sighandler_t) finish );
+        signal( SIGFPE, (sighandler_t) finish );
+        signal( SIGSYS, (sighandler_t) finish );
+        signal( SIGURG, (sighandler_t) finish );
+        signal( SIGTTIN, (sighandler_t) finish );
+        signal( SIGTTOU, (sighandler_t) finish );
 
     	//daemonize();
         if ( daemon( 0, 0) < 0 )
@@ -876,10 +881,10 @@ int main(int argc, char *argv[])
     }
 
     //SIGTERM is what we expect to kill us.
-    signal( SIGTERM, (__sighandler_t) finish );
+    signal( SIGTERM, (sighandler_t) finish );
 
     //SIGUSR1 resets the link speed.
-    signal( SIGUSR1, (__sighandler_t) resetsig );
+    signal( SIGUSR1, (sighandler_t) resetsig );
 
     //Create the status file and ping socket
     //These are called here because the above daemon() call closes
@@ -916,10 +921,10 @@ int main(int argc, char *argv[])
         }
 
         //Ctrl-C terminates       
-        signal( SIGINT, (__sighandler_t) finish );
+        signal( SIGINT, (sighandler_t) finish );
 
         //Close terminal terminates       
-        signal( SIGHUP, (__sighandler_t) finish );
+        signal( SIGHUP, (sighandler_t) finish );
 
         setlinebuf( stdout );
 
@@ -1079,15 +1084,21 @@ int main(int argc, char *argv[])
                 }
                 break;
 
-            // In the wait state we have a nearly idle link.
+            // In the idle state we have a nearly idle link.
             // In these cases it is not necessary to monitor delay times so the active
             // ping is disabled.
             case QMON_IDLE:
                 pingon=0;
 
-                //This limit should be the same as the dynamic range or we could get stuck
-                //in the IDLE state. 
-                if (dbw_fil < 0.15 * DBW_UL) break;
+            //Add a hysterisis band when going in/out of IDLE mode.
+            //to try and prevent getting stuck in IDLE mode at the edge of the dynamic range
+            //
+            //We exit idle mode when the link gets above 12% of the upper limit.
+            //We enter idle mode when we get below 10%. (2% hysterisis band).
+            //With this setup at 15% it would be possible to get stuck here since the dynamic limit
+            //can fall as low as 15% which would mean we might not be able to get above 15% to restart the ACTIVE mode.
+            //Hopefully we will always be able to get above 12% at least.
+            if (dbw_fil < 0.12 * DBW_UL) break;
 
             // In the ACTIVE & REALTIME states we observe ping times as long as the
             // link remains active.  While we are observing we adjust the 
@@ -1122,11 +1133,11 @@ int main(int argc, char *argv[])
                 //additional time it will take our ping to pass through such a queue turns out to be the RTT. 
                 //But Barman et all, Globecomm2004 indicates that only 20-30% of this is really needed.  
                 //
-                //When we measured an RTT above that was to the ISPs gateway so we do not really know what the average 
+                //When we measured an RTT above that it was to the ISPs gateway so we do not really know what the average 
                 //RTT time to other IPs on the internet.  And since not all hosts respond the same anyway I doubt there
                 //is consistant RTT that we could use.
 				//	
-                //For ACTIVE mode on a 925kbps/450kbps link I measure the following 
+                //For ACTIVE mode on a 925kbps/450kbps link I measured the following 
                 //relationship between ping limit and throughput with large packets downloading.
                 //
                 //Ping Limit   Throughput   Percent
@@ -1151,7 +1162,7 @@ int main(int argc, char *argv[])
                 //what we have in RTT mode.  The packet delay was entered on the command line or zero if nothing was entered.
 
                 //I hope that this will work well for a broad range of users from satellite links with RTTs of 1 second or more
-                //or users with hot connections that have small queue upstream of them.
+                //to users with hot connections that have small queues upstream of them.
 
                 if ((RTDCA == 0) && (pingflags & ADDENTITLEMENT)) {
                     plimit=135*pinglimit_cl/100+pinglimit;

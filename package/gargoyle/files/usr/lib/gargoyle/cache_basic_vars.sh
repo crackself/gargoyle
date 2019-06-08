@@ -139,14 +139,6 @@ elif [ -e /lib/wifi/mac80211.sh ] && [ -e "/sys/class/ieee80211/phy0" ] ; then
 		print_mac80211_channels_for_wifi_dev "$r" "$rnum" "$out_file" "$dualband"
 		rnum=$(( $rnum+1 ))
 	done
-
-
-elif [ -e /lib/wifi/madwifi.sh ] && [ -e "/sys/class/net/wifi0" ] ; then
-	echo "var wirelessDriver=\"atheros\";" >> "$out_file"
-	echo "var GwifiN = false;" >> "$out_file"
-	echo "var AwifiN = false;" >> "$out_file"
-	echo "var AwifiAC = false;" >> "$out_file"
-	echo "var dualBandWireless=false;" >> "$out_file"
 else
 	echo "var wirelessDriver=\"\";" >> "$out_file"
 	echo "var GwifiN = false;" >> "$out_file"
@@ -156,6 +148,8 @@ else
 fi
 
 awk -F= '/DISTRIB_TARGET/{printf "var distribTarget=%s;\n", $2}' /etc/openwrt_release >> "$out_file"
+
+echo $(ping -c 1 8.8.8.8 >/dev/null 2>/dev/null && gipquery -g -r JS) >> "$out_file"
 
 # cache default interfaces if we haven't already
 # this script is run on first boot by hotplug, so

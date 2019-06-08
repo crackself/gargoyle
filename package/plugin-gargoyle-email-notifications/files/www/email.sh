@@ -10,7 +10,7 @@
 # Cron configuration code was derived from wifi_schedule plugin, which was written by BashfulBladder.
 #
 eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time" )
-gargoyle_header_footer -h -s "system" -p "email_notifications" -c "internal.css" -j "email.js" -z "email.js" -i email
+gargoyle_header_footer -h -s "system" -p "email_notifications" -j "email.js" -z "email.js" -i email
 %>
 
 <script>
@@ -101,7 +101,7 @@ for (tab_idx in cron_data) {
 					<span class="col-xs-7 col-sm-9"><input type='text' class='form-control' id='sender' size='35' /></span>
 				</div>
 				<div class="row form-group">
-					<label class='col-xs-5 col-sm-3' for='receiver'><%~ email.Receipment %></label>
+					<label class='col-xs-5 col-sm-3' for='receiver'><%~ email.Recipient %></label>
 					<span class="col-xs-7 col-sm-9"><input type='text' class='form-control' id='receiver' size='35' /></span>
 				</div>
 				<div class="row form-group">

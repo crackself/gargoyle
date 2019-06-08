@@ -6,14 +6,14 @@
 	# itself remain covered by the GPL.
 	# See http://gargoyle-router.com/faq.html#qfoss for more information
 	eval $( gargoyle_session_validator -c "$COOKIE_hash" -e "$COOKIE_exp" -a "$HTTP_USER_AGENT" -i "$REMOTE_ADDR" -r "login.sh" -t $(uci get gargoyle.global.session_timeout) -b "$COOKIE_browser_time"  )
-	gargoyle_header_footer -h -s "status" -p "webmon" -c "internal.css" -j "webmon.js table.js" -z "webmon.js" -n webmon_gargoyle gargoyle
+	gargoyle_header_footer -h -s "status" -p "webmon" -j "webmon.js table.js" -z "webmon.js" -n webmon_gargoyle gargoyle
 %>
 
 <script>
 <!--
 <%
-	webmon_enabled=$(ls /etc/rc.d/*webmon_gargoyle* 2>/dev/null)
-	if [ -n "$webmon_enabled" ] ; then
+	webmon_enabled=$(uci get webmon_gargoyle.webmon.enabled 2>/dev/null)
+	if [ "$webmon_enabled" == "1" ] ; then
 		echo "var webmonEnabled=true;"
 	else
 		echo "var webmonEnabled=false;"
