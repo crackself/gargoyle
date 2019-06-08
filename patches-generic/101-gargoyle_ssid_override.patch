@@ -1,11 +1,51 @@
 --- a/package/kernel/mac80211/files/lib/wifi/mac80211.sh
 +++ b/package/kernel/mac80211/files/lib/wifi/mac80211.sh
-@@ -119,7 +119,7 @@ detect_mac80211() {
- 			set wireless.default_radio${devidx}.device=radio${devidx}
- 			set wireless.default_radio${devidx}.network=lan
- 			set wireless.default_radio${devidx}.mode=ap
--			set wireless.default_radio${devidx}.ssid=OpenWrt
-+			set wireless.default_radio${devidx}.ssid=Gargoyle
- 			set wireless.default_radio${devidx}.encryption=none
+@@ -105,6 +105,11 @@ detect_mac80211() {
+                else
+                        dev_id="set wireless.radio${devidx}.macaddr=$(cat /sys/class/ieee80211/${dev}/macaddress)"
+                fi
++               if [ x$mode_band == x"a" ]; then
++                       ssid_5ghz="-5G"
++               else
++                       ssid_5ghz=""
++               fi
+
+                uci -q batch <<-EOF
+                        set wireless.radio${devidx}=wifi-device
+@@ -113,13 +118,13 @@ detect_mac80211() {
+                        set wireless.radio${devidx}.hwmode=11${mode_band}
+                        ${dev_id}
+                        ${ht_capab}
+-                       set wireless.radio${devidx}.disabled=1
++                       set wireless.radio${devidx}.disabled=0
+
+                        set wireless.default_radio${devidx}=wifi-iface
+                        set wireless.default_radio${devidx}.device=radio${devidx}
+                        set wireless.default_radio${devidx}.network=lan
+                        set wireless.default_radio${devidx}.mode=ap
+-                       set wireless.default_radio${devidx}.ssid=OpenWrt
++                       set wireless.default_radio${devidx}.ssid=Gargoyle${ssid_5ghz}
+                        set wireless.default_radio${devidx}.encryption=none
  EOF
- 		uci -q commit wireless
+                uci -q commit wireless
+
+--- a/package/base-files/files/bin/config_generate
++++ b/package/base-files/files/bin/config_generate
+@@ -96,7 +96,7 @@ generate_network() {
+                static)
+                        local ipad
+                        case "$1" in
+-                               lan) ipad=${ipaddr:-"192.168.1.1"} ;;
++                               lan) ipad=${ipaddr:-"192.168.11.1"} ;;
+                                *) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"} ;;
+                        esac
+
+@@ -234,7 +234,7 @@ generate_static_system() {
+        uci -q batch <<-EOF
+                delete system.@system[0]
+                add system system
+-               set system.@system[-1].hostname='OpenWrt'
++               set system.@system[-1].hostname='Gargoyle'
+                set system.@system[-1].timezone='UTC'
+                set system.@system[-1].ttylogin='0'
+                set system.@system[-1].log_size='64'
