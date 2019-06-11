@@ -499,11 +499,6 @@ if [ ! -d "$openwrt_src_dir" ] ; then
 	cd "$top_dir" 
 fi
 
-#download openwrt luci source if we haven't already
-if [ ! -d "$top_dir"/package/luci ] ; then
-	git clone -b for-15.05 https://github.com/crackself/luci.git "$top_dir"/package/luci
-fi
-
 rm -rf "$openwrt_src_dir/dl" 
 ln -s "$top_dir/downloaded" "$openwrt_src_dir/dl"
 
@@ -686,6 +681,9 @@ for target in $targets ; do
 		scripts/patch-kernel.sh . "$targets_dir/$target/patches/" 
 		if [ "$target" = "custom" ] ; then
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 1 0  
+			# update feeds
+		    	cd $target-src
+		    	./scripts/feeds update -a && rm .config && rm -rf tmp && ./scripts/feeds install -a
 			make menuconfig
 			sh $netfilter_patch_script . "$top_dir/netfilter-match-modules" 0 1  
 		else
