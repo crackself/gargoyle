@@ -1,5 +1,5 @@
 # GARGOYLE_VERSION:=1.11.X (Built $(shell echo "`date -u +%Y%m%d-%H%M` git@`git log -1 --pretty=format:%h`"))
-GARGOYLE_VERSION:=1.11.0 (??? $(shell echo "`date -u +%Y-%m-%d` `date -u +%H`:`date -u +%M`"))
+GARGOYLE_VERSION:=1.11.0 (优化版 $(shell echo "`date -u +%Y-%m-%d` `date -u +%H`:`date -u +%M`"))
 V=99
 FULL_BUILD=false
 CUSTOM_TEMPLATE=ar71xx
