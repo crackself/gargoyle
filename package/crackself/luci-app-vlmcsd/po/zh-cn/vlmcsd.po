@@ -1,0 +1,28 @@
+msgid ""
+msgstr ""
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "KMS config"
+msgstr "KMS 设置"
+
+msgid "<b><font color=green>KMS running</font></b>"
+msgstr "<b><font color=green>KMS 运行中</font></b>"
+
+msgid "<b><font color=red>KMS stopped</font></b>"
+msgstr "<b><font color=red>KMS 未运行</font></b>"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Auto activate"
+msgstr "自动激活"
+
+msgid "configfile"
+msgstr "配置文件"
+
+msgid "This file is /etc/vlmcsd.ini."
+msgstr "这个文件是/etc/vlmcsd.ini。"
