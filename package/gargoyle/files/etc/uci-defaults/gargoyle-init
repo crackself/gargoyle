@@ -57,6 +57,7 @@ if [ "$settings_not_preserved" == "1" ] ; then
 	/etc/init.d/mjpg-streamer disable	2>/dev/null
 	/etc/init.d/samba disable			2>/dev/null
 	/etc/init.d/tor disable				2>/dev/null
+	/etc/init.d/vlmcsd disable			2>/dev/null
 	
 fi
 
