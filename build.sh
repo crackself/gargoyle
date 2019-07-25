@@ -493,6 +493,7 @@ if [ ! -d "$openwrt_src_dir" ] ; then
 	fi
 	if [ -n "$openwrt_commit" ] ; then
 		cd "$openwrt_src_dir"
+		./scripts/feeds update luci && cp -r "$openwrt_src_dir/feeds/luci" "$openwrt_src_dir/package/luci"
 		git checkout "$openwrt_commit"
 	fi
 
