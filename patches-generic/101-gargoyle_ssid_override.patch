@@ -14,7 +14,7 @@
  		uci -q batch <<-EOF
  			set wireless.radio${devidx}=wifi-device
  			set wireless.radio${devidx}.type=mac80211
-@@ -113,13 +118,13 @@
+@@ -113,14 +118,15 @@
  			set wireless.radio${devidx}.hwmode=11${mode_band}
  			${dev_id}
  			${ht_capab}
@@ -26,8 +26,9 @@
  			set wireless.default_radio${devidx}.network=lan
  			set wireless.default_radio${devidx}.mode=ap
 -			set wireless.default_radio${devidx}.ssid=OpenWrt
-+			set wireless.default_radio${devidx}.ssid=Gargoyle${ssid_5ghz}
- 			set wireless.default_radio${devidx}.encryption=none
++			set wireless.default_radio${devidx}.ssid=My-Router${ssid_5ghz}
++			set wireless.default_radio${devidx}.encryption=psk2
++			set wireless.default_radio${devidx}.key=crackself
  EOF
  		uci -q commit wireless
 
