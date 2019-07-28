@@ -628,8 +628,12 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 					<span class="col-xs-7">
 						<select class="form-control" id="lan_dns_source" onchange="setDnsSource(this)">
 							<option value="isp"><%~ DfltDNS %></option>
-							<option value="opendns"><%~ OpnSrvs %></option>
 							<option value="google"><%~ GooSrvs %></option>
+							<option value="ali"><%~ AliSrvs %></option>
+							<option value="c114"><%~ c114Srvs %></option>
+							<option value="adguard"><%~ AdgSrvs %></option>
+							<option value="adguarddf"><%~ AdgSrvsDF %></option>
+							<option value="opendns"><%~ OpnSrvs %></option>
 							<option value="opendnsfs"><%~ OpnSrvsFS %></option>
 							<option value="quad9"><%~ Quad9 %></option>
 							<option value="custom"><%~ CstDSrv %></option>

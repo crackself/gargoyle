@@ -13,9 +13,13 @@ var toggleReload = false;
 var currentLanIp;
 
 var googleDns = ["8.8.8.8", "8.8.4.4" ];
+var aliDns = ["223.5.5.5", "223.6.6.6" ];
+var c114Dns = ["114.114.114.114", "114.114.115.115" ];
+var adguardDns = ["176.103.130.130", "176.103.130.131" ];
+var adguardDnsDF = ["176.103.130.132", "176.103.130.134" ];
 var openDns = ["208.67.222.222", "208.67.220.220" ];
 var openDnsFS = ["208.67.222.123", "208.67.220.123" ];
-var quad9DNS = ["9.9.9.9", "149.112.112.112" ];
+var quad9Dns = ["9.9.9.9", "149.112.112.112" ];
 
 var ncDns  = [ "178.32.31.41", "106.187.47.17", "176.58.118.172" ]
 var onDns  = [ "66.244.95.20", "95.211.32.162", "95.142.171.235" ]
@@ -922,6 +926,22 @@ function saveChanges()
 			{
 				dnsList = googleDns;
 			}
+			else if(dnsSource == "ali" && notBridge )
+			{
+				dnsList = alidDns;
+			}
+			else if(dnsSource == "c114" && notBridge )
+			{
+				dnsList = c114Dns;
+			}
+			else if(dnsSource == "adguard" && notBridge )
+			{
+				dnsList = adguardDns;
+			}
+			else if(dnsSource == "adguarddf" && notBridge )
+			{
+				dnsList = adguardDnsDF;
+			}
 			else if(dnsSource == "opendns" && notBridge )
 			{
 				dnsList = openDns;
@@ -932,7 +952,7 @@ function saveChanges()
 			}
 			else if(dnsSource == "quad9" && notBridge )
 			{
-				dnsList = quad9DNS;
+				dnsList = quad9Dns;
 			}
 			else //custom
 			{
@@ -1795,6 +1815,30 @@ function resetData()
 	{
 		dnsType = "isp";
 	}
+	else if( dnsTableData.join(",") == aliDns.join(",") || dnsTableData.join(",") == aliDns.reverse().join(",") )
+	{
+		dnsType = "ali";
+	}
+	else if( dnsTableData.join(",") == c114Dns.join(",") || dnsTableData.join(",") == c114Dns.reverse().join(",") )
+	{
+		dnsType = "c114";
+	}
+	else if( dnsTableData.join(",") == adguardDns.join(",") || dnsTableData.join(",") == adguardDns.reverse().join(",") )
+	{
+		dnsType = "adguard";
+	}
+	else if( dnsTableData.join(",") == adguardDnsDF.join(",") || dnsTableData.join(",") == adguardDnsDF.reverse().join(",") )
+	{
+		dnsType = "adguarddf";
+	}
+	else if( dnsTableData.join(",") == googleDns.join(",") || dnsTableData.join(",") == googleDns.reverse().join(",") )
+	{
+		dnsType = "google";
+	}
+	else if( dnsTableData.join(",") == quad9Dns.join(",") || dnsTableData.join(",") == quad9Dns.reverse().join(",") )
+	{
+		dnsType = "quad9";
+	}
 	else if( dnsTableData.join(",") == openDns.join(",") || dnsTableData.join(",") == openDns.reverse().join(",") )
 	{
 		dnsType = "opendns";
@@ -1802,15 +1846,7 @@ function resetData()
 	else if( dnsTableData.join(",") == openDnsFS.join(",") || dnsTableData.join(",") == openDnsFS.reverse().join(",") )
 	{
 		dnsType = "opendnsfs";
-	}
-	else if( dnsTableData.join(",") == googleDns.join(",") || dnsTableData.join(",") == googleDns.reverse().join(",") )
-	{
-		dnsType = "google";
-	}
-	else if( dnsTableData.join(",") == quad9DNS.join(",") || dnsTableData.join(",") == quad9DNS.reverse().join(",") )
-	{
-		dnsType = "quad9";
-	}
+	}	
 	setSelectedValue("lan_dns_source", dnsType);
 	setDnsSource(document.getElementById("lan_dns_source"))
 
