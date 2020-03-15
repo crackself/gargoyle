@@ -19,7 +19,7 @@ var adguardDns = ["176.103.130.130", "176.103.130.131" ];
 var adguardDnsDF = ["176.103.130.132", "176.103.130.134" ];
 var openDns = ["208.67.222.222", "208.67.220.220" ];
 var openDnsFS = ["208.67.222.123", "208.67.220.123" ];
-var quad9Dns = ["9.9.9.9", "149.112.112.112" ];
+var quad9DNS = ["9.9.9.9", "149.112.112.112" ];
 
 var ncDns  = [ "178.32.31.41", "106.187.47.17", "176.58.118.172" ]
 var onDns  = [ "66.244.95.20", "95.211.32.162", "95.142.171.235" ]
@@ -984,7 +984,7 @@ function saveChanges()
 			}
 			else if(dnsSource == "quad9" && notBridge )
 			{
-				dnsList = quad9Dns;
+				dnsList = quad9DNS;
 			}
 			else //custom
 			{
@@ -1951,7 +1951,7 @@ function resetData()
 	{
 		dnsType = "google";
 	}
-	else if( dnsTableData.join(",") == quad9Dns.join(",") || dnsTableData.join(",") == quad9Dns.reverse().join(",") )
+	else if( dnsTableData.join(",") == quad9DNS.join(",") || dnsTableData.join(",") == quad9Dns.reverse().join(",") )
 	{
 		dnsType = "quad9";
 	}
