@@ -548,12 +548,10 @@ function UCIContainer()
 				var matches = oldValue.length == newValue.length;
 				if(matches)
 				{
-					var sortedOld = oldValue.sort()
-					var sortedNew = newValue.sort()
-					var sortedIndex;
-					for(sortedIndex=0; matches && sortedIndex <sortedOld.length; sortedIndex++)
+					var matchIndex;
+					for(matchIndex=0; matches && matchIndex < oldValue.length; matchIndex++)
 					{
-						matches = sortedOld[sortedIndex] == sortedNew[sortedIndex] ? true : false
+						matches = oldValue[matchIndex] == newValue[matchIndex] ? true : false
 					}
 				}
 				if(matches)
@@ -786,6 +784,7 @@ function setDescriptionVisibility(descriptionId, defaultDisplay, displayText, hi
 	if(ref.firstChild.data == displayText)
 	{
 		txt.style.display=defaultDisplay;
+		txt.scrollIntoView(false);
 		ref.firstChild.data = hideText;
 		command = command + "1\n";
 	}
@@ -811,13 +810,20 @@ function initializeDescriptionVisibility(testUci, descriptionId, defaultDisplay,
 
 	var descLinkText = displayText;
 	var descDisplay = "none";
-	if(testUci.get("gargoyle", "help", descriptionId) == "1")
+	var help = testUci.get("gargoyle", "help", descriptionId);
+	if(help == "1")
 	{
-		descLinkText = hideText
+		descLinkText = hideText;
 		descDisplay = defaultDisplay;
 	}
-	document.getElementById(descriptionId + "_ref").firstChild.data = descLinkText;
-	document.getElementById(descriptionId + "_txt").style.display = descDisplay;
+	// don't try to re-initialize after we've already removed the help section
+	if(help)
+	{
+		document.getElementById(descriptionId + "_ref").firstChild.data = descLinkText;
+		document.getElementById(descriptionId + "_txt").style.display = descDisplay;
+		// necessary, or we overwrite the help settings when we save changes
+		testUci.removeSection("gargoyle", "help");
+	}
 }
 
 
@@ -874,6 +880,27 @@ function rangeInSubnet(mask, ip, start, end)
 	return false;
 }
 
+function parseIp(ip)
+{
+	var ip = ip.split(".");
+	return ((((((+ip[0])*256)+(+ip[1]))*256)+(+ip[2]))*256)+(+ip[3]);
+}
+function ipInRange(ip, start, end)
+{
+	var ip = parseIp(ip);
+	return parseIp(start) <= ip && ip <= parseIp(end);
+}
+function ipInClassA(ip) { return ipInRange(ip, "0.0.0.0", "127.255.255.255"); }
+function ipInClassB(ip) { return ipInRange(ip, "128.0.0.0", "191.255.255.255"); }
+function ipInClassC(ip) { return ipInRange(ip, "192.0.0.0", "223.255.255.255"); }
+function ipInClassD(ip) { return ipInRange(ip, "224.0.0.0", "239.255.255.255"); }
+function ipInClassE(ip) { return ipInRange(ip, "240.0.0.0", "255.255.255.255"); }
+function ipInPrivateClassA(ip) { return ipInRange(ip, "10.0.0.0", "10.255.255.255"); }
+function ipInPrivateClassB(ip) { return ipInRange(ip, "172.16.0.0", "172.31.255.255"); }
+function ipInPrivateClassC(ip) { return ipInRange(ip, "192.168.0.0", "192.168.255.255"); }
+function ipInPrivate(ip) { return ipInPrivateClassA(ip) || ipInPrivateClassB(ip) || ipInPrivateClassC(ip); }
+function ipInLinkLocal(ip) { return ipInRange(ip, "169.254.0.0", "169.254.255.255"); }
+function ipInLocalhost(ip) { return ipInRange(ip, "127.0.0.0", "127.255.255.255"); }
 
 function proofreadFields(inputIds, labelIds, functions, validReturnCodes, visibilityIds, fieldDocument )
 {
@@ -915,6 +942,13 @@ function proofreadFields(inputIds, labelIds, functions, validReturnCodes, visibi
 		}
 	}
 	return errorArray;
+}
+function resetProofreadFields(inputIds)
+{
+	for (var i = 0; i < inputIds.length; i++)
+	{
+		resetProofreadText(document.getElementById(inputIds[i]));
+	}
 }
 
 function parseBytes(bytes, units, abbr, dDgt)
@@ -1000,7 +1034,7 @@ function setElementEnabled(element, enabled, defaultValue)
 		element.disabled=false;
 		if(element.type == "text" || element.type == "textarea")
 		{
-			element.style.color="#000000";
+			element.style.color="";
 			element.className="form-control" ;
 		}
 		else if(element.type == "select-one" || element.type == "select-multiple" || element.type == "select" )
@@ -1037,7 +1071,24 @@ function setElementEnabled(element, enabled, defaultValue)
 	}
 }
 
+function setElementReadOnly(element, readOnly)
+{
+	if(readOnly)
+	{
+		element.disabled = false;
+	}
+	element.readOnly = readOnly;
+}
 
+function updateReadOnlyAssociate(associate, element)
+{
+	var associate = document.getElementById(associate);
+	if(associate.readOnly && !associate.disabled)
+	{
+		associate.value = element.value;
+		associate.style.color = element.style.color;
+	}
+}
 
 function getSelectedValue(selectId, controlDocument)
 {
@@ -1890,6 +1941,14 @@ function validateHex(text)
 }
 
 
+function validateSsid(ssid)
+{
+	return validateLengthRange(ssid, 1, 32)
+}
+function proofreadSsid(input)
+{
+	proofreadText(input, validateSsid, 0);
+}
 
 function validateHours(hoursStr)
 {
@@ -1996,7 +2055,10 @@ function proofreadText(input, proofFunction, validReturnCode)
 		input.style.color = (proofFunction(input.value) == validReturnCode) ? "" : "red";
 	}
 }
-
+function resetProofreadText(input)
+{
+	input.style.color = "";
+}
 
 function getEmbeddedSvgWindow(embeddedId, controlDocument)
 {
@@ -3050,10 +3112,12 @@ function modalPrepare(modalID, title, elements, buttons)
 	defaultDismiss.onclick = function(){closeModalWindow(modalID);};
 	defaultDismiss.className = "btn btn-warning";
 	defaultDismiss.innerText = UI.Cancel;
+	defaultDismiss.id = "modal_button_default_dismiss";
 	defaultDiscard = document.createElement("button");
 	defaultDiscard.onclick = function(){closeModalWindow(modalID);};
 	defaultDiscard.className = "btn btn-warning";
 	defaultDiscard.innerText = UI.CDiscardChanges;
+	defaultDiscard.id = "modal_button_default_discard";
 
 	titleEl = document.getElementById(modalID + "_title");
 	if(titleEl) { titleEl.innerHTML = title; }
@@ -3068,6 +3132,17 @@ function modalPrepare(modalID, title, elements, buttons)
 		inputEl = document.getElementById(element.id);
 		if(inputEl)
 		{
+			if(element.options !== undefined)
+			{
+				removeAllOptionsFromSelectElement(inputEl);
+				for (var key in element.options)
+				{
+					var optEl = document.createElement('option');
+					optEl.innerHTML = element.options[key];
+					optEl.value = key;
+					inputEl.options.add(optEl);
+				}
+			}
 			if(element.value !== undefined)
 			{
 				inputEl.value = element.value;
@@ -3098,6 +3173,14 @@ function modalPrepare(modalID, title, elements, buttons)
 			btnEl.className = button.classes;
 			btnEl.onclick = button.function;
 			btnEl.innerText = button.title;
+			if(button.id !== undefined)
+			{
+				btnEl.id = button.id;
+			}
+			if(button.disabled !== undefined)
+			{
+				btnEl.disabled = button.disabled;
+			}
 			btnContainer.appendChild(btnEl);
 		}
 	});

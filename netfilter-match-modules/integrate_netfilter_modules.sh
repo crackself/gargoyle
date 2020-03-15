@@ -148,7 +148,7 @@ ifeq ($(call qstrip,$(CONFIG_EXTERNAL_KERNEL_TREE))$(call qstrip,$(CONFIG_KERNEL
   ifeq ($(word 1,$(subst ., ,$(KERNEL_BASE))),3)
     LINUX_SITE:=@KERNEL/linux/kernel/v3.x$(TESTING)
   else
-    LINUX_SITE:=@KERNEL/linux/kernel/v$(KERNEL)$(TESTING)
+    LINUX_SITE:=@KERNEL/linux/kernel/v$(word 1,$(subst ., ,$(KERNEL_BASE))).x$(TESTING)
   endif
 endif
 
@@ -205,7 +205,7 @@ EOF
 	
 
 	echo 'all:' >> nf-patch-build/iptables-download-make
-	echo '	if [ ! -e "$(DL_DIR)/$(PKG_SOURCE)" ] ; then  TOPDIR="$(TOPDIR)" $(SCRIPT_DIR)/download.pl $(DL_DIR) $(PKG_SOURCE) $(PKG_MIRROR_HASH)  $(PKG_SOURCE)  $(PKG_SOURCE_URL) ; fi ; ' >> nf-patch-build/iptables-download-make
+	echo '	if [ ! -e "$(DL_DIR)/$(PKG_SOURCE)" ] ; then  TOPDIR="$(TOPDIR)" $(SCRIPT_DIR)/download.pl $(DL_DIR) $(PKG_SOURCE) $(PKG_HASH)  $(PKG_SOURCE)  $(PKG_SOURCE_URL) ; fi ; ' >> nf-patch-build/iptables-download-make
 	echo '	cp $(DL_DIR)/$(PKG_SOURCE) . ' >>nf-patch-build/iptables-download-make
 	echo '	tar xf $(PKG_SOURCE)' >>nf-patch-build/iptables-download-make
 	echo '	rm -rf *.bz2 *.xz' >>nf-patch-build/iptables-download-make

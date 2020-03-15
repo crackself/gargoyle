@@ -1,8 +1,6 @@
--fonera20n-squashfs
--mpr-a2-squashfs
--px-4885-8M-squashfs
--vocore-8M-squashfs
--vocore-16M-squashfs
--wt1520-8M-squashfs
--psg1218-16m
--psg1218
+px-4885-8M-squashfs
+fonera20n-squashfs
+mpr-a2-squashfs
+wt1520-8M-squashfs
+vocore-16M-squashfs
+vocore-8M-squashfs
