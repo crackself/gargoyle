@@ -14,12 +14,13 @@ var currentLanIp;
 
 var googleDns = ["8.8.8.8", "8.8.4.4" ];
 var aliDns = ["223.5.5.5", "223.6.6.6" ];
-var c114Dns = ["114.114.114.114", "114.114.115.115" ];
+var 114Dns = ["114.114.114.114", "114.114.115.115" ];
 var adguardDns = ["176.103.130.130", "176.103.130.131" ];
 var adguardDnsDF = ["176.103.130.132", "176.103.130.134" ];
 var openDns = ["208.67.222.222", "208.67.220.220" ];
 var openDnsFS = ["208.67.222.123", "208.67.220.123" ];
 var quad9DNS = ["9.9.9.9", "149.112.112.112" ];
+var cloudflareDns = [["1.1.1.1","1.0.0.1"],["2606:4700:4700::1111","2606:4700:4700::1001"]];
 
 var ncDns  = [ "178.32.31.41", "106.187.47.17", "176.58.118.172" ]
 var onDns  = [ "66.244.95.20", "95.211.32.162", "95.142.171.235" ]
@@ -105,7 +106,7 @@ function saveChanges()
 			uci.set("wireless", wifiDevG, "channel", channels["G"]);
 			if( document.getElementById("wifi_channel_width_container").style.display == "block" || document.getElementById("bridge_channel_width_container").style.display == "block" )
 			{
-				uci.set("wireless", wifiDevG, "htmode",  getSelectedValue("wifi_channel_width") );	//always set htmode, even if it is "NONE"
+				uci.set("wireless", wifiDevG, "htmode",  getSelectedValue("wifi_channel_width") );						//always set htmode, even if it is "NONE"
 			}
 			txPowerSet("wifi_max_txpower", "wifi_txpower", wifiDevG)
 		}
@@ -535,15 +536,30 @@ function saveChanges()
 			ppoeReconnectIds = ['wan_pppoe_reconnect_pings', 'wan_pppoe_interval'];
 			wifiSsidId = wifiGSelected ? "wifi_ssid1" : "wifi_ssid1a";
 			wifiGuestSsidId = wifiGSelected ? "wifi_guest_ssid1" : "wifi_guest_ssid1a";
-			inputIds = ['wan_protocol', 'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', ppoeReconnectIds, 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_mac', 'wan_mtu', 'lan_ip', 'lan_mask', 'lan_gateway', wifiSsidId, 'wifi_ft', 'wifi_hidden', 'wifi_isolate', 'wifi_encryption1', 'wifi_pass1', 'wifi_wep1', wifiGuestSsidId, 'wifi_guest_ft', 'wifi_guest_hidden', 'wifi_guest_isolate', 'wifi_guest_encryption1', 'wifi_guest_pass1', 'wifi_guest_wep1', 'wifi_server1', 'wifi_port1', 'wifi_pass2', 'wifi_wep2', 'wan_3g_device', 'wan_3g_user', 'wan_3g_pass', 'wan_3g_apn', 'wan_3g_pincode', 'wan_3g_service', 'wan_3g_isp'];
+			inputIds = [
+					'wan_protocol', 'wan6_protocol', 'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', ppoeReconnectIds, 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_static_ip6', 'wan_static_gateway6', 'wan_mac', 'wan_mtu', 
+					'lan_ip', 'lan_mask', 'lan_gateway', 'lan_ip6assign', 'lan_ip6hint', 'lan_ip6ifaceid', 'lan_ip6gw',
+					wifiSsidId, 'wifi_ft', 'wifi_hidden', 'wifi_isolate', 'wifi_encryption1', 'wifi_pass1', 'wifi_wep1', wifiGuestSsidId, 'wifi_guest_ft', 'wifi_guest_hidden', 'wifi_guest_isolate', 'wifi_guest_encryption1', 'wifi_guest_pass1', 'wifi_guest_wep1', 'wifi_server1', 'wifi_port1', 'wifi_pass2', 'wifi_wep2', 
+					'wan_3g_device', 'wan_3g_user', 'wan_3g_pass', 'wan_3g_apn', 'wan_3g_pincode', 'wan_3g_service', 'wan_3g_isp'
+					];
 
-			options = ['proto', 'username', 'password', 'demand', 'keepalive', 'ipaddr', 'netmask', 'gateway', 'macaddr', 'mtu', 'ipaddr', 'netmask', 'gateway', 'ssid', 'ieee80211r', 'hidden', 'isolate', 'encryption', 'key', 'key', 'ssid', 'ieee80211r', 'hidden', 'isolate', 'encryption', 'key', 'key', 'auth_server', 'auth_port', 'key', 'key', 'device', 'username', 'password', 'apn', 'pincode', 'service', 'mobile_isp'];
+			options = [
+					'proto', 'proto', 'username', 'password', 'demand', 'keepalive', 'ipaddr', 'netmask', 'gateway', 'ip6addr', 'ip6gw', 'macaddr', 'mtu', 
+					'ipaddr', 'netmask', 'gateway', 'ip6assign', 'ip6hint', 'ip6ifaceid', 'ip6gw',
+					'ssid', 'ieee80211r', 'hidden', 'isolate', 'encryption', 'key', 'key', 'ssid', 'ieee80211r', 'hidden', 'isolate', 'encryption', 'key', 'key', 'auth_server', 'auth_port', 'key', 'key',
+					'device', 'username', 'password', 'apn', 'pincode', 'service', 'mobile_isp'
+					];
 
 			var sv=  setVariableFromValue;
 			var svm= setVariableFromModifiedValue;
 			var svcat= setVariableFromConcatenation;
 			var svcond= setVariableConditionally;
-			setFunctions = [sv,sv,sv,svm,svcat,sv,sv,sv,svcond,svcond,sv,sv,sv,sv,svcond,svcond,svcond,sv,sv,sv,sv,svcond,svcond,svcond,sv,sv,sv,sv,sv,sv,sv,sv,sv,sv,sv,sv,sv,sv];
+			setFunctions = [
+					sv,sv,sv,sv,svm,svcat,sv,sv,sv,svm,svm,svcond,svcond,
+					sv,sv,sv,sv,sv,sv,svm,
+					sv,svcond,svcond,svcond,sv,sv,sv,sv,svcond,svcond,svcond,sv,sv,sv,sv,sv,sv,sv,
+					sv,sv,sv,sv,sv,sv,sv
+					];
 			var f=false;
 			var t=true;
 			var minutesToSeconds = function(value){return value*60;};
@@ -565,8 +581,14 @@ function saveChanges()
 			var guestFtParams = [ifGuestFtChecked,f,'1'];
 			var guestHiddenParams = [ifGuestHiddenChecked,f,'1'];
 			var guestIsolateParams = [ifGuestIsolateChecked,f,'1'];
+			var ip6Params = [f,ip6_canonical];
 
-			additionalParams = [f,f,f, demandParams,f,f,f,f,macParams,mtuParams,f,f,f,f,ftParams,hiddenParams,isolateParams,f,f,f,f,guestFtParams,guestHiddenParams,guestIsolateParams,f,f,f,f,f,f,f,f,f,f,f,f,f,f];
+			additionalParams = [
+						f,f,f,f, demandParams,f,f,f,f,ip6Params,ip6Params,macParams,mtuParams,
+						f,f,f,f,f,f,ip6Params,
+						f,ftParams,hiddenParams,isolateParams,f,f,f,f,guestFtParams,guestHiddenParams,guestIsolateParams,f,f,f,f,f,f,f,
+						f,f,f,f,f,f,f
+					];
 
 			pppoeReconnectVisibilityIds = ['wan_pppoe_reconnect_pings_container', 'wan_pppoe_interval_container'];
 			multipleVisibilityIds= [pppoeReconnectVisibilityIds];
@@ -575,6 +597,12 @@ function saveChanges()
 			pkgs = [];
 			sections = [];
 			var idIndex;
+inputIds = [
+					'wan_protocol', 'wan6_protocol', 'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', ppoeReconnectIds, 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_static_ip6', 'wan_static_gateway6', 'wan_mac', 'wan_mtu', 
+					'lan_ip', 'lan_mask', 'lan_gateway', 'lan_ip6assign', 'lan_ip6hint', 'lan_ip6ifaceid', 'lan_ip6gw',
+					wifiSsidId, 'wifi_ft', 'wifi_hidden', 'wifi_isolate', 'wifi_encryption1', 'wifi_pass1', 'wifi_wep1', wifiGuestSsidId, 'wifi_guest_ft', 'wifi_guest_hidden', 'wifi_guest_isolate', 'wifi_guest_encryption1', 'wifi_guest_pass1', 'wifi_guest_wep1', 'wifi_server1', 'wifi_port1', 'wifi_pass2', 'wifi_wep2', 
+					'wan_3g_device', 'wan_3g_user', 'wan_3g_pass', 'wan_3g_apn', 'wan_3g_pincode', 'wan_3g_service', 'wan_3g_isp'
+					];
 			for(idIndex=0; idIndex < inputIds.length; idIndex++)
 			{
 				if(isArray(inputIds[idIndex]))
@@ -586,19 +614,25 @@ function saveChanges()
 					visibilityIds.push(inputIds[idIndex]+ "_container");
 				}
 
-				if(idIndex == 8)
+				if(idIndex == 1)
+				{
+					pkgs.push('network');
+					sections.push('wan6');
+					uci.remove('network', 'wan6', options[idIndex]);
+				}
+				else if(idIndex == 11)
 				{
 					pkgs.push('network');
 					sections.push(wanMacLoc);
 					uci.remove('network', wanMacLoc, options[idIndex]);
 				}
-				else if(idIndex < 10 || idIndex > 30)
+				else if(idIndex < 13 || idIndex > 37)
 				{
 					pkgs.push('network');
 					sections.push('wan');
 					uci.remove('network', 'wan', options[idIndex]);
 				}
-				else if(idIndex < 13)
+				else if(idIndex < 20)
 				{
 					pkgs.push('network');
 					sections.push('lan')
@@ -611,6 +645,18 @@ function saveChanges()
 				}
 			}
 			setVariables(inputIds, visibilityIds, uci, pkgs, sections, options, setFunctions, additionalParams);
+
+			//set lan_ip6addr if requested
+			if(document.getElementById("lan_ip6assign_option").value == "disabled")
+			{
+				uci.createListOption("network","lan","ip6addr",true);
+				ip6addrdata = getTableDataArray(document.getElementById("lan_ip6_table"), true, false);
+				uci.set("network","lan","ip6addr",ip6addrdata);
+			}
+			else
+			{
+				uci.remove("network","lan","ip6addr");
+			}
 
 			//correct G networks as needed (though it would be better not to write them)
 			if(apgncfg && uci.get("wireless", apgncfg, "ssid") == "")
@@ -700,8 +746,19 @@ function saveChanges()
 			else
 			{
 				uci.set("network", "wan", "proto", getSelectedValue('wan_protocol').replace(/_.*$/g, ""));
-				//Fixes some pppoe issues. To be removed if ipv6 is implemented.
-				uci.set("network", "wan", "ipv6", "0");
+
+				w6prot = getSelectedValue('wan6_protocol');
+				ip6en = "0";
+				if(getSelectedValue('wan_protocol') == 'pppoe_wired')
+				{
+					ip6en = "auto";
+				}
+				else if(w6prot != 'none')
+				{
+					ip6en = "1"
+				}
+				uci.set("network", "wan", "ipv6", ip6en);
+				uci.set("network", "wan6", "proto", w6prot);
 			}
 			if(uci.get('network', 'lan', 'proto') === '')
 			{
@@ -946,17 +1003,21 @@ function saveChanges()
 		//we set from lan table, but we keep bridge & lan dns tables synchronized
 		//so they should be identical
 		uci.remove('network', 'wan', 'dns');
+		uci.remove('network', 'wan6', 'dns');
 		var lanGateway = uci.get("network", "lan", "gateway");
 		lanGateway = lanGateway == "" ? uci.get("network", "lan", "ipaddr") : lanGateway;
 		var dns = lanGateway;
+		var dns6 = "";
 		var dnsSource = getSelectedValue("lan_dns_source");
 		var notBridge = document.getElementById("global_gateway").checked
 		if(dnsSource != "isp")
 		{
 			var dnsList = [];
+			var dnsList6 = [];
 			if(dnsSource == "google" && notBridge )
 			{
-				dnsList = googleDns;
+				dnsList = googleDns[0];
+				dnsList6 = googleDns[1];
 			}
 			else if(dnsSource == "ali" && notBridge )
 			{
@@ -964,7 +1025,7 @@ function saveChanges()
 			}
 			else if(dnsSource == "c114" && notBridge )
 			{
-				dnsList = c114Dns;
+				dnsList = 114Dns;
 			}
 			else if(dnsSource == "adguard" && notBridge )
 			{
@@ -976,34 +1037,60 @@ function saveChanges()
 			}
 			else if(dnsSource == "opendns" && notBridge )
 			{
-				dnsList = openDns;
+				dnsList = openDns[0];
+				dnsList6 = openDns[1];
 			}
 			else if(dnsSource == "opendnsfs" && notBridge )
 			{
-				dnsList = openDnsFS;
+				dnsList = openDnsFS[0];
+				dnsList6 = openDnsFS[1];
 			}
 			else if(dnsSource == "quad9" && notBridge )
 			{
-				dnsList = quad9DNS;
+				dnsList = quad9DNS[0];
+				dnsList6 = quad9DNS[1];
+			}
+			else if(dnsSource == "cloudflare" && notBridge )
+			{
+				dnsList = cloudflareDns[0];
+				dnsList6 = cloudflareDns[1];
 			}
 			else //custom
 			{
 				var dnsData = getTableDataArray(document.getElementById("lan_dns_table_container").firstChild);
 				var dnsIndex=0;
-				for(dnsIndex=0; dnsIndex < dnsData.length; dnsIndex++) { dnsList.push(dnsData[dnsIndex][0]); }
+				for(dnsIndex=0; dnsIndex < dnsData.length; dnsIndex++)
+				{
+					if(isIPv4(dnsData[dnsIndex][0]))
+					{
+						dnsList.push(dnsData[dnsIndex][0]);
+					}
+					elseif(isIPv6(dnsData[dnsIndex][0]))
+					{
+						dnsList6.push(dnsData[dnsIndex][0]);
+					}
+				}
 			}
 			dns = dnsList.length > 0 ? dnsList.join(" ") : dns;
+			dns6 = dnsList6.length > 0 ? dnsList6.join(" ") : dns6;
 
 			//if a wan is active and we have custom DNS settings, propagate to the wan too
 			if( notBridge && uci.get("network", "wan", "") != "" && dns != lanGateway)
 			{
 				uci.set("network", "wan", "dns", dns);
-				uci.set("network", "wan", "peerdns", "0")
+				uci.set("network", "wan", "peerdns", "0");
+				if(dns6 != "")
+				{
+					uci.set("network", "wan6", "dns", dns6);
+					uci.set("network", "wan6", "peerdns", "0");
+				}
 			}
+			dns = [dns,dns6].join(" ");
 		}
 		else if( notBridge && uci.get("network", "wan", "") != "")
 		{
-			uci.remove("network", "wan", "peerdns")
+			uci.remove("network", "wan", "peerdns");
+			uci.remove("network", "wan6", "peerdns");
 		}
 		uci.set("network", "lan", "dns", dns)
 
@@ -1120,6 +1207,11 @@ function proofreadAll()
 	var vfk = validateFtKey;
 	var vtp = function(text){ return validateNumericRange(text, 0, getMaxTxPower("G")); };
 	var vtpa = function(text){ return validateNumericRange(text, 0, getMaxTxPower("A")); };
+	var vip6fr = validateIP6ForceRange;
+	var vip6 = validateIP6;
+	var vip6m = function(text) { return validateNumericRange(text, 1, 128); };
+	var vip6h = function(text) { return validateLengthRange(text,0,4) || (text.match(/[^0-9a-f]/) == null ? 0 : 1); };
+	var vip6if = function(text) { return validateIP6(text) || ((ip6_canonical(text) == ip6_mask(text,-32)) ? 0 : 1); };
 
 	var testWds = function(tableContainerId, selectId, wdsValue)
 	{
@@ -1135,9 +1227,19 @@ function proofreadAll()
 	var errors = [];
 	if(document.getElementById("global_gateway").checked)
 	{
-		var inputIds = ['wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_mac', 'wan_mtu', 'lan_ip', 'lan_mask', 'lan_gateway', 'wifi_txpower', 'wifi_txpower_5ghz', 'wifi_ssid1', 'wifi_pass1', 'wifi_wep1', 'wifi_ft_key', 'wifi_guest_pass1', 'wifi_guest_wep1', 'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_pass2', 'wifi_wep2', 'wan_3g_device', 'wan_3g_apn'];
+		var inputIds = [
+				'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_mac', 'wan_mtu', 'wan_static_ip6', 'wan_static_gateway6',
+				'lan_ip', 'lan_mask', 'lan_gateway', 'lan_ip6assign', 'lan_ip6hint', 'lan_ip6ifaceid', 'lan_ip6gw',
+				'wifi_txpower', 'wifi_txpower_5ghz', 'wifi_ssid1', 'wifi_pass1', 'wifi_wep1', 'wifi_ft_key', 'wifi_guest_pass1', 'wifi_guest_wep1', 'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_pass2', 'wifi_wep2', 
+				'wan_3g_device', 'wan_3g_apn'
+		];
 
-		var functions= [vlr1, vlr1, vn, vn, vn, vip, vnm, vip, vm, vn, vip, vnm, vip, vtp, vtpa, vid, vp, vw, vfk, vpg, vw, vip, vnp, vid, vp2, vw, vlr1, vlr1];
+		var functions= [
+				vlr1, vlr1, vn, vn, vn, vip, vnm, vip, vm, vn, vip6fr, vip6,
+				vip, vnm, vip, vip6m, vip6h, vip6if, vip6,
+				vtp, vtpa, vid, vp, vw, vfk, vpg, vw, vip, vnp, vid, vp2, vw,
+				vlr1, vlr1
+		];
 
 		var optInputIds = ['wifi_ssid1a', 'wifi_guest_ssid1', 'wifi_guest_ssid1a']
 		for(index in optInputIds)
@@ -1199,6 +1301,16 @@ function proofreadAll()
 
 function setGlobalVisibility()
 {
+	if(getSelectedValue("wan_protocol") == "none")
+	{
+		setSelectedValue("wan6_protocol", "none");
+		document.getElementById("wan6_protocol").disabled = true;
+	}
+	else
+	{
+		document.getElementById("wan6_protocol").disabled = false;
+	}
+
 	if( getSelectedValue("wan_protocol").match(/wireless/) )
 	{
 		currentMode=getSelectedValue('wifi_mode');
@@ -1283,17 +1395,21 @@ function setGlobalVisibility()
 
 function setWanVisibility()
 {
-	var wanIds=['wan_dhcp_ip_container', 'wan_dhcp_expires_container', 'wan_pppoe_user_container', 'wan_pppoe_pass_container', 'wan_pppoe_reconnect_mode_container', 'wan_pppoe_max_idle_container', 'wan_pppoe_reconnect_pings_container', 'wan_pppoe_interval_container', 'wan_static_ip_container', 'wan_static_mask_container', 'wan_static_gateway_container', 'wan_mac_container', 'wan_mtu_container', 'wan_ping_container', 'lan_gateway_container', 'wan_3g_device_container', 'wan_3g_user_container', 'wan_3g_pass_container', 'wan_3g_apn_container', 'wan_3g_pincode_container', 'wan_3g_service_container', 'wan_3g_isp_container'];
+	var wanIds=['wan_dhcp_ip_container', 'wan_dhcp_expires_container', 'wan_pppoe_user_container', 'wan_pppoe_pass_container', 'wan_pppoe_reconnect_mode_container', 'wan_pppoe_max_idle_container', 'wan_pppoe_reconnect_pings_container', 'wan_pppoe_interval_container', 'wan_static_ip_container', 'wan_static_mask_container', 'wan_static_gateway_container', 'wan_mac_container', 'wan_mtu_container', 'wan_ping_container', 'lan_gateway_container', 'wan_3g_device_container', 'wan_3g_user_container', 'wan_3g_pass_container', 'wan_3g_apn_container', 'wan_3g_pincode_container', 'wan_3g_service_container', 'wan_3g_isp_container', 'wan_dhcp6_ip_container', 'wan_static_ip6_container', 'wan_static_gateway6_container', 'lan_ip6gw_container', 'lan_ip6addr_container', 'lan_ip6hint_container', 'lan_ip6ifaceid_container', 'lan_ip6assign_container'];
 
 	var maxIdleIndex = 5;
 	var notWifi= getSelectedValue('wan_protocol').match(/wireless/) ? 0 : 1;
+	var w6p = getSelectedValue('wan6_protocol') == 'static' ? 1 : 0;
+	var w6en = getSelectedValue('wan6_protocol') == 'none' ? 0 : w6p == 0 ? 1 : 0;
+	var l6a = getSelectedValue('lan_ip6assign_option') == "enabled" ? 1 : 0;
+	var nl6a = !l6a;
 
-	var dhcpVisability     = [1,1,  0,0,0,0,0,0,  0,0,0,  1,notWifi,1,       0, 0,0,0,0,0,0,0];
-	var pppoeVisability    = [0,0,  1,1,1,1,1,1,  0,0,0,  notWifi,notWifi,1, 0, 0,0,0,0,0,0,0];
-	var staticVisability   = [0,0,  0,0,0,0,0,0,  1,1,1,  1,notWifi,1,       0, 0,0,0,0,0,0,0];
-	var disabledVisability = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,0,             1, 0,0,0,0,0,0,0];
-	var tgVisability       = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,1,             0, 1,1,1,1,1,1,1];
-	var qmiVisability      = [0,0,  0,0,0,0,0,0,  0,0,0,  1,0,1,             0, 1,1,1,1,1,0,1];
+	var dhcpVisability     = [1,1,  0,0,0,0,0,0,  0,0,0,  1,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var pppoeVisability    = [0,0,  1,1,1,1,1,1,  0,0,0,  notWifi,notWifi,1, 0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var staticVisability   = [0,0,  0,0,0,0,0,0,  1,1,1,  1,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var disabledVisability = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,0,             1, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var tgVisability       = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,1,             0, 1,1,1,1,1,1,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var qmiVisability      = [0,0,  0,0,0,0,0,0,  0,0,0,  1,0,1,             0, 1,1,1,1,1,0,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
 
 	var wanVisibilities= new Array();
 	wanVisibilities['dhcp'] = dhcpVisability;
@@ -1694,7 +1810,8 @@ function localdate(ldate)
 
 function resetData()
 {
-	wanMacLoc = uciOriginal.get("network","wan_dev") != "" ? "wan_dev" : wanMacLoc;
+	wanMacAltLoc = defaultWanIf != "" ? ("wan_" + defaultWanIf.replace(".","_") + "_dev"): "wan_dev";
+	wanMacLoc = uciOriginal.get("network",wanMacAltLoc) != "" ? wanMacAltLoc : wanMacLoc;
 	var removeChannels = [];
 	var hwAmode = "disabled";
 	var hwGmode = "disabled";
@@ -1740,6 +1857,21 @@ function resetData()
 		setElementEnabled(document.getElementById("dhcp_renew_button"), true);
 		setElementEnabled(document.getElementById("dhcp_release_button"), false);
 	}
+
+	var ip6txt = "-";
+	if(currentWanIp6.length > 0)
+	{
+		ip6txt = "";
+		for(var x = 0; x < currentWanIp6.length; x++)
+		{
+			if(ip6_scope(currentWanIp6[x])[0] == "Global" && currentWanMask6[x] == "128")
+			{
+				ip6txt = ip6txt + (x == 0 ? "" : "\n") + currentWanIp6[x];
+			}
+		}
+				
+	}
+	setChildText("dhcp6_ip", ip6txt);
 
 
 	setChildText("bridge_wifi_mac",  currentWirelessMacs[0], null, null, null);
@@ -1849,6 +1981,14 @@ function resetData()
 	if(wp == "dhcp_wired" && wanUciIf != defaultWanIf) { wp = "dhcp_cdc"; }
 	setSelectedValue("wan_protocol", wp);
 
+	var wp6 = uciOriginal.get("network", "wan6", "proto");
+	var wp6en = uciOriginal.get("network", "wan", "ipv6");
+	if(wp6en == "" || wp6en == "0")
+	{
+		wp6 = "none";
+	}
+	setSelectedValue("wan6_protocol", wp6);
+
 	var wanToLanStatus = lanUciIf.indexOf(defaultWanIf) < 0 ? 'disable' : 'bridge' ;
 	setSelectedValue('bridge_wan_port_to_lan', wanToLanStatus);
 	setSelectedValue('wan_port_to_lan', wanToLanStatus);
@@ -1860,23 +2000,24 @@ function resetData()
 
 
 	//first load basic variables for wan & lan sections
-	networkIds = ['wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_use_mac', 'wan_mac', 'wan_use_mtu', 'wan_mtu', 'lan_ip', 'lan_mask', 'lan_gateway', 'wan_3g_device', 'wan_3g_user', 'wan_3g_pass', 'wan_3g_apn', 'wan_3g_pincode', 'wan_3g_service', 'wan_3g_isp'];
+	networkIds = ['wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_static_ip6', 'wan_static_gateway6', 'wan_use_mac', 'wan_mac', 'wan_use_mtu', 'wan_mtu', 'lan_ip', 'lan_mask', 'lan_gateway', 'lan_ip6assign', 'lan_ip6assign_option', 'lan_ip6hint', 'lan_ip6ifaceid', 'wan_3g_device', 'wan_3g_user', 'wan_3g_pass', 'wan_3g_apn', 'wan_3g_pincode', 'wan_3g_service', 'wan_3g_isp'];
 	networkPkgs = new Array();
 	for(idIndex in networkIds)
 	{
 		networkPkgs.push('network');
 	}
 
-	networkSections = ['wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', wanMacLoc, wanMacLoc, 'wan', 'wan', 'lan', 'lan', 'lan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan'];
-	networkOptions  = ['username', 'password', 'demand', 'keepalive', 'keepalive', 'ipaddr', 'netmask', 'gateway', 'macaddr','macaddr', 'mtu', 'mtu', 'ipaddr', 'netmask', 'gateway', 'device', 'username', 'password', 'apn', 'pincode', 'service', 'mobile_isp'];
+	networkSections = ['wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', wanMacLoc, wanMacLoc, 'wan', 'wan', 'lan', 'lan', 'lan', 'lan', 'lan', 'lan', 'lan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan', 'wan'];
+	networkOptions  = ['username', 'password', 'demand', 'keepalive', 'keepalive', 'ipaddr', 'netmask', 'gateway', 'ip6addr', 'ip6gw', 'macaddr','macaddr', 'mtu', 'mtu', 'ipaddr', 'netmask', 'gateway', 'ip6assign', 'ip6assign', 'ip6hint', 'ip6ifaceid', 'device', 'username', 'password', 'apn', 'pincode', 'service', 'mobile_isp'];
 
 	pppoeDemandParams = [5*60,1/60];
 	pppoeReconnectParams = [3,0];
 	pppoeIntervalParams = [5,1];
 	useMtuTest = function(v){return (v=='' || v==null || v==1500 ? false : true);}
 	useMacTest = function(v){v = (v== null ? '' : v);  return (v=='' || v.toLowerCase()==defaultWanMac.toLowerCase() ? false : true);}
+	ip6AssignTest = function(v){return (v == "" ? "disabled" : "enabled");}
 
-	networkParams = ['', '', pppoeDemandParams, pppoeReconnectParams, pppoeIntervalParams, '10.1.1.10', '255.255.255.0', '127.0.0.1', useMacTest, defaultWanMac, useMtuTest, 1500, '192.168.1.1', '255.255.255.0', '192.168.1.1', '/dev/ttyUSB0', '', '', 'internet', '', 'umts', 'custom'];
+	networkParams = ['', '', pppoeDemandParams, pppoeReconnectParams, pppoeIntervalParams, '10.1.1.10', '255.255.255.0', '127.0.0.1', '2001:db80::2/64', '2001:db80::1', useMacTest, defaultWanMac, useMtuTest, 1500, '192.168.1.1', '255.255.255.0', '192.168.1.1', '60', ['60', ip6AssignTest], '', '::1', '/dev/ttyUSB0', '', '', 'internet', '', 'umts', 'custom'];
 
 	var firewallDefaultSections = uciOriginal.getAllSectionsOfType("firewall", "defaults");
 
@@ -1885,9 +2026,78 @@ function resetData()
 	lvm=loadValueFromVariableMultiple;
 	lvi=loadValueFromVariableAtIndex;
 	lc=loadChecked;
-	networkFunctions = [lv,lv,lvm,lvi,lvi,lv,lv,lv,lc,lv,lc,lv,lv,lv,lv,lv,lv,lv,lv,lv,lv,lv];
+	lvmod=loadValueFromModifiedVariable;
+	networkFunctions = [lv,lv,lvm,lvi,lvi,lv,lv,lv,lv,lv,lc,lv,lc,lv,lv,lv,lv,lv,lvmod,lv,lv,lv,lv,lv,lv,lv,lv,lv];
 
 	loadVariables(uciOriginal, networkIds, networkPkgs, networkSections, networkOptions, networkParams, networkFunctions);
+
+	//load additional ipv6
+	lan_ip6addrdata = [];
+	lan_ip6addr = uciOriginal.get("network","lan","ip6addr");
+	if(lan_ip6addr != "")
+	{
+		if(typeof(lan_ip6addr) == "object")
+		{
+			for(var x = 0; x < lan_ip6addr.length; x++)
+			{
+				scope = ip6_scope(lan_ip6addr[x]);
+				if(scope[0] == "Global")
+				{
+					if(scope[1] == "Global Unicast Address")
+					{
+						lan_ip6addrgw = lan_ip6addr[x];
+					}
+					lan_ip6addrdata.push([lan_ip6addr[x]]);
+				}
+			}
+		}
+		else
+		{
+			lan_ip6addrdata.push([lan_ip6addr]);
+		}
+	}
+	else if(currentLanIp6.length > 0)
+	{
+		lan_ip6addrgw = "";
+		for(var x = 0; x < currentLanIp6.length; x++)
+		{
+			scope = ip6_scope(currentLanIp6[x]);
+			if(scope[0] == "Global")
+			{
+				if(scope[1] == "Global Unicast Address")
+				{
+					lan_ip6addrgw = currentLanIp6[x] + "/" + currentLanMask6[x];
+				}
+				lan_ip6addrdata.push([currentLanIp6[x] + "/" + currentLanMask6[x]]);
+			}
+		}
+	}
+	else
+	{
+		//load default
+		lan_ip6addrdata.push([currentULAPrefix + "1/60"]);
+	}
+
+	var lanIp6Table=createTable([""], lan_ip6addrdata, "lan_ip6_table", true, false);
+	var lanIp6TableContainer = document.getElementById('lan_ip6_table_container');
+	if(lanIp6TableContainer.firstChild != null)
+	{
+		lanIp6TableContainer.removeChild(lanIp6TableContainer.firstChild);
+	}
+	lanIp6TableContainer.appendChild(lanIp6Table);
+
+	lan_ip6gw = uciOriginal.get("network","lan","ip6gw");
+	document.getElementById("lan_ip6gw").value = lan_ip6gw == "" ? ip6_splitmask(lan_ip6addrgw).address : lan_ip6gw;
+
+	var ip6txt = "";
+	for(var x = 0; x < currentLanIp6.length; x++)
+	{
+		if(ip6_scope(currentLanIp6[x])[0] == "Global")
+		{
+			ip6txt = ip6txt + (x == 0 ? "" : "\n") + currentLanIp6[x] + "/" + currentLanMask6[x];
+		}
+	}
+	setChildText("lan_ip6", ip6txt);
 
 	if(uciOriginal.get('network', 'wan', 'proto') == '')
 	{
@@ -1920,7 +2130,7 @@ function resetData()
 		var dip = origDns[dIndex]
 		var isRouterIp = !confIsBridge && dip == routerIp
 		var isBridgeGw =   confIsBridge && dip == routerGateway
-		if(  (!isRouterIp) && (!isBridgeGw) && validateIP(dip) == 0)
+		if(  (!isRouterIp) && (!isBridgeGw) && (validateIP(dip) == 0 || validateIP6(dip) == 0))
 		{
 			dnsTableData.push([dip]);
 		}
@@ -1935,9 +2145,9 @@ function resetData()
 	{
 		dnsType = "ali";
 	}
-	else if( dnsTableData.join(",") == c114Dns.join(",") || dnsTableData.join(",") == c114Dns.reverse().join(",") )
+	else if( dnsTableData.join(",") == 114Dns.join(",") || dnsTableData.join(",") == 114Dns.reverse().join(",") )
 	{
-		dnsType = "c114";
+		dnsType = "114";
 	}
 	else if( dnsTableData.join(",") == adguardDns.join(",") || dnsTableData.join(",") == adguardDns.reverse().join(",") )
 	{
@@ -1962,7 +2172,11 @@ function resetData()
 	else if( dnsTableData.join(",") == openDnsFS.join(",") || dnsTableData.join(",") == openDnsFS.reverse().join(",") )
 	{
 		dnsType = "opendnsfs";
-	}	
+	}
+	else if( dnsTableData.join(",") == cloudflareDns.join(",") || dnsTableData.join(",") == cloudflareDns.reverse().join(",") )
+	{
+		dnsType = "cloudflare";
+	}
 	setSelectedValue("lan_dns_source", dnsType);
 	setDnsSource(document.getElementById("lan_dns_source"))
 
@@ -2535,11 +2749,11 @@ function addDns(section)
 {
 	var textId = "add_" + section + "_dns";
 	addIp = document.getElementById(textId).value;
-	addTextToSingleColumnTable(textId, "lan_dns_table_container", validateIP, function(str){ return str; }, 0, false, "IP");
+	addTextToSingleColumnTable(textId, "lan_dns_table_container", isIPv4(addIp) ? validateIP : validateIP6, function(str){ return str; }, 0, false, "IP");
 	if(addIp != "" && document.getElementById(textId).value == "")
 	{
 		document.getElementById(textId).value = addIp;
-		addTextToSingleColumnTable("add_" + section + "_dns", "bridge_dns_table_container", validateIP, function(str){ return str; }, 0, false, "IP");
+		addTextToSingleColumnTable("add_" + section + "_dns", "bridge_dns_table_container", isIPv4(addIp) ? validateIP : validateIP6, function(str){ return str; }, 0, false, "IP");
 	}
 }
 
@@ -3768,8 +3982,8 @@ function getAltServerDefs(currentAltDefs, currentRebindServers, altDefsEnabled)
 	}
 	if(altDefsEnabled)
 	{
-		addDefsForAlt(ncTlds, ncDns);
-		addDefsForAlt(onTlds, onDns);
+		addDefsForAlt(ncTlds, ncDns[0]);
+		addDefsForAlt(onTlds, onDns[0]);
 	}
 	return [ defs, domains ];
 }
@@ -4043,4 +4257,27 @@ function dfsChanTest()
 	ch2 = getSelectedValue("wifi_channel_width_5ghz") == "VHT80P80" ? getSelectedValue("wifi_channel1_seg2_5ghz") : ch2;
 	
 	return ((ch1 >= 52 && ch1 <= 144 ? true : false) || (ch2 >= 52 && ch2 <= 144 ? true : false));
+}
+
+function calculateMask6(mask)
+{
+	retVal = "";
+	addr = document.getElementById("lan_ip6").value;
+	if(validateIP6(addr) == 0)
+	{
+		retVal = ip6_mask(addr, mask);
+	}
+	
+	document.getElementById("lan_mask6").innerHTML = "<em>" + retVal + "</em>";
+}
+
+function addIp6(section)
+{
+	var textId = "add_" + section + "_ip6";
+	addTextToSingleColumnTable(textId, "lan_ip6_table_container", validateIP6ForceRange, function(str){ return ip6_canonical(str); }, 0, false, "IP");
+}
+
+function proofreadDnsIp(input)
+{
+	isIPv4(input.value) ? proofreadIp(input) : proofreadIp6(input);
 }

@@ -17,7 +17,7 @@
 	position: absolute;
 	z-index: 2000;
 	opacity: .75;
-	MozOpacity: .75;
+	-moz-opacity: .75;
 	filter: alpha(opacity=75)
 }
 #wait_icon
@@ -194,7 +194,7 @@ input.text_disabled, select.select_disabled
 }
 input.form-control[readonly]
 {
-	background-color: transparent;
+	background-color: #fff;
 	border-style: dashed
 }
 #bottom_button_container

@@ -588,20 +588,20 @@ function UCIContainer()
 							for(vi=0; vi< newValue.length ; vi++)
 							{
 								var nv = "" + newValue[vi] + "";
-								commandArray.push( "uci add_list " + key + "=\'" + nv.replace(/'/, "'\\''") + "\'" );
+								commandArray.push( "uci add_list " + key + "=\'" + nv.replace(/'/g, "'\\''") + "\'" );
 							}
 						}
 					}
 					else
 					{
 						newValue = "" + newValue + ""
-						commandArray.push( "uci set " + key + "=\'" + newValue.replace(/'/, "'\\''") + "\'" );
+						commandArray.push( "uci set " + key + "=\'" + newValue.replace(/'/g, "'\\''") + "\'" );
 					}
 				}
 				else if(oldValue != newValue && (newValue != null && newValue !=''))
 				{
 					newValue = "" + newValue + ""
-					commandArray.push( "uci set " + key + "=\'" + newValue.replace(/'/, "'\\''") + "\'" );
+					commandArray.push( "uci set " + key + "=\'" + newValue.replace(/'/g, "'\\''") + "\'" );
 				}
 			}
 			catch(e)
@@ -771,6 +771,28 @@ function getWirelessMode(uciTest)
 	return wirelessMode;
 }
 
+function scrollUntilInView(element)
+{
+	var bounding = element.getBoundingClientRect();
+	// Consider header of fixed position.
+	var contentTop = document.getElementById("content").getBoundingClientRect().top;
+	// Only scroll element if not already in view.
+	if(bounding.top < contentTop || bounding.bottom > window.innerHeight)
+	{
+		// Scroll element just until its bottom is in view but only if its top is not truncated.
+		var alignToTop = bounding.height > window.innerHeight - contentTop;
+		try
+		{
+			// Try it smoothly.
+			element.scrollIntoView({ behavior: "smooth", block: alignToTop ? "start" : "end" });
+		}
+		catch(error)
+		{
+			// IE, Safari...
+			element.scrollIntoView(alignToTop);
+		}
+	}
+}
 
 function setDescriptionVisibility(descriptionId, defaultDisplay, displayText, hideText)
 {
@@ -780,12 +802,13 @@ function setDescriptionVisibility(descriptionId, defaultDisplay, displayText, hi
 
 	var ref = document.getElementById( descriptionId + "_ref" );
 	var txt = document.getElementById( descriptionId + "_txt" );
+	var box = document.getElementById( descriptionId );
 	var command = "uci set gargoyle.help." + descriptionId + "=";
 	if(ref.firstChild.data == displayText)
 	{
-		txt.style.display=defaultDisplay;
-		txt.scrollIntoView(false);
 		ref.firstChild.data = hideText;
+		txt.style.display = defaultDisplay;
+		scrollUntilInView(box);
 		command = command + "1\n";
 	}
 	else
@@ -821,8 +844,6 @@ function initializeDescriptionVisibility(testUci, descriptionId, defaultDisplay,
 	{
 		document.getElementById(descriptionId + "_ref").firstChild.data = descLinkText;
 		document.getElementById(descriptionId + "_txt").style.display = descDisplay;
-		// necessary, or we overwrite the help settings when we save changes
-		testUci.removeSection("gargoyle", "help");
 	}
 }
 
@@ -1762,8 +1783,8 @@ function validateMultipleIpsOrMacs(addresses)
 			var nextSplit = nextAddr.split(/[\t ]*-[\t ]*/);
 			if( nextSplit.length==2 && validateIP(nextSplit[0]) == 0 && validateIP(nextSplit[1]) == 0)
 			{
-				var ipInt1 = getIpInt(nextSplit[0]);
-				var ipInt2 = getIpInt(nextSplit[1]);
+				var ipInt1 = getIpInteger(nextSplit[0]);
+				var ipInt2 = getIpInteger(nextSplit[1]);
 				valid = ipInt1 <= ipInt2 ? 0 : 1;
 			}
 			else
@@ -2218,7 +2239,7 @@ function textListToSpanElement(textList, addCommas, controlDocument)
 
 function addAddressStringToTable(controlDocument, newAddrs, tableContainerId, tableId, macsValid, ipValidType, alertOnError, tableWidth)
 {
-	//ipValidType: 0=none, 1=ip only, 2=ip or ip subnet, 3>=ip, ip subnet or ip range
+	//ipValidType: 0=none, 1=ip only, 2=ip or ip subnet, 3=ip, ip subnet or ip range, 4=ip only, 5=ip or ipsubnet, 6>=ip, ip subnet or ip range
 	macsValid = macsValid == null ? true : macsValid;
 	ipValidType = ipValidType == null ? 3 : ipValidType;
 	var ipValidFunction;
@@ -2234,9 +2255,21 @@ function addAddressStringToTable(controlDocument, newAddrs, tableContainerId, ta
 	{
 		ipValidFunction = validateIpRange;
 	}
-	else
+	else if(ipValidType == 3)
 	{
 		ipValidFunction = validateMultipleIps;
+	}
+	else if(ipValidType == 4)
+	{
+		ipValidFunction = validateIP6;
+	}
+	else if(ipValidType == 5)
+	{
+		ipValidFunction = validateIp6Range;
+	}
+	else
+	{
+		ipValidFunction = validateMultipleIp6s;
 	}
 
 	var allCurrentMacs = [];
@@ -2275,7 +2308,16 @@ function addAddressStringToTable(controlDocument, newAddrs, tableContainerId, ta
 		if(macValid || ipValid)
 		{
 			var currAddrs = macValid ? allCurrentMacs : allCurrentIps;
-			valid = currAddrs.length == 0 || (!testAddrOverlap(addr, currAddrs.join(","))) ? 0 : 1;
+			var treatipv6 = false;
+			if(macValid || ipValidType <= 3)
+			{
+				treatipv6 = false;
+			}
+			else
+			{
+				treatipv6 = true;
+			}
+			valid = currAddrs.length == 0 || (!testAddrOverlap(addr, currAddrs.join(","), treatipv6)) ? 0 : 1;
 			if(valid == 0)
 			{
 				currAddrs.push(addr); //if we're adding multiple addrs and there's overlap, this will allow us to detect it
@@ -2297,7 +2339,25 @@ function addAddressStringToTable(controlDocument, newAddrs, tableContainerId, ta
 
 		while(addrs.length > 0)
 		{
-			addTableRow(table, [ addrs.shift() ], true, false, null, null, controlDocument);
+			var tmpaddr = addrs.shift();
+			if(tmpaddr.indexOf("-") > -1)
+			{
+				var tmpaddrs = tmpaddr.split("-");
+				if(isIPv6(tmpaddrs[0]))
+				{
+					tmpaddrs[0] = ip6_canonical(tmpaddrs[0]);
+					tmpaddrs[1] = ip6_canonical(tmpaddrs[1]);
+					tmpaddr = tmpaddrs.join("-");
+				}
+			}
+			else
+			{
+				if(isIPv6(tmpaddr))
+				{
+					tmpaddr = ip6_canonical(tmpaddr);
+				}
+			}
+			addTableRow(table, [ tmpaddr ], true, false, null, null, controlDocument);
 		}
 
 		if(tableContainer.childNodes.length == 0)
@@ -2386,8 +2446,59 @@ function getIpRangeIntegers(ipStr)
 
 }
 
+function getIp6RangeStrings(ipStr)
+{
+	var startStr = "";
+	var endStr = "";
+	if(ipStr.match(/\//))
+	{
+		var split = ipStr.split(/[\t ]*\/[\t ]*/);
+		startStr = ip6_full(ip6_mask(split[0],split[1]));
+		var startBin = ip6addr2bin(startStr);
+		endStr = ip6bin2addr(startBin.substr(0,split[1]) + '1'.repeat(128-split[1]));
+	}
+	else if(ipStr.match(/-/))
+	{
+		var split = ipStr.split(/[\t ]*\-[\t ]*/);
+		startStr = ip6_full(split[0]);
+		endStr = ip6_full(split[1]);
+	}
+	else
+	{
+		startStr = ip6_full(ipStr);
+		endStr = startStr;
+	}
+	return [startStr, endStr];
 
-function testSingleAddrOverlap(addrStr1, addrStr2)
+}
+
+function ip6addr2bin(addr)
+{
+	var ip6addr = ip6_full(addr);
+	var sections = ip6addr.split(":");
+	var binaddr = "";
+	for(var x = 0; x < sections.length; x++)
+	{
+		binaddr += parseInt(sections[x],16).toString(2).padStart(16,'0');
+	}
+
+	return binaddr;
+}
+
+function ip6bin2addr(bin)
+{
+	var sections = [];
+	for(var x = 0; x < 8; x++)
+	{
+		var section = bin.substr(x*16, 16);
+		var hexsection = parseInt(section, 2).toString(16).padStart(4,'0');
+		sections.push(hexsection);
+	}
+
+	return sections.join(":");
+}
+
+function testSingleAddrOverlap(addrStr1, addrStr2, treatipv6)
 {
 	/*
 	 * this adjustment is useful in multiple places, particularly quotas
@@ -2413,22 +2524,40 @@ function testSingleAddrOverlap(addrStr1, addrStr2)
 	}
 	else //assume we're dealing with an actual IP / IP subnet / IP Range
 	{
-		if(validateMultipleIps(addrStr1) > 0 || validateMultipleIps(addrStr2) > 0 || addrStr1.match(",") || addrStr2.match(",") )
+		if(treatipv6)
 		{
-			matches = false;
+			if(validateMultipleIp6s(addrStr1) > 0 || validateMultipleIp6s(addrStr2) > 0 || addrStr1.match(",") || addrStr2.match(",") )
+			{
+				matches = false;
+			}
+			else
+			{
+				var parsed1 = getIp6RangeStrings(addrStr1);
+				var parsed2 = getIp6RangeStrings(addrStr2);
+				matches = parsed1[0] <= parsed2[1] && parsed1[1] >= parsed2[0]; //test range overlap, inclusive
+			}
 		}
 		else
 		{
-			var parsed1 = getIpRangeIntegers(addrStr1);
-			var parsed2 = getIpRangeIntegers(addrStr2);
-			matches = parsed1[0] <= parsed2[1] && parsed1[1] >= parsed2[0]; //test range overlap, inclusive
+			if(validateMultipleIps(addrStr1) > 0 || validateMultipleIps(addrStr2) > 0 || addrStr1.match(",") || addrStr2.match(",") )
+			{
+				matches = false;
+			}
+			else
+			{
+				var parsed1 = getIpRangeIntegers(addrStr1);
+				var parsed2 = getIpRangeIntegers(addrStr2);
+				matches = parsed1[0] <= parsed2[1] && parsed1[1] >= parsed2[0]; //test range overlap, inclusive
+			}
 		}
 	}
 	return matches;
 }
 
-function testAddrOverlap(addrStr1, addrStr2)
+function testAddrOverlap(addrStr1, addrStr2, treatipv6)
 {
+	treatipv6 = treatipv6 == true ? treatipv6 : false;
+
 	addrStr1 = addrStr1.replace(/^[\t ]+/, "");
 	addrStr1 = addrStr1.replace(/[\t ]+$/, "");
 	addrStr2 = addrStr2.replace(/^[\t ]+/, "");
@@ -2443,7 +2572,7 @@ function testAddrOverlap(addrStr1, addrStr2)
 		var index2;
 		for(index2=0; index2 <split2.length && (!overlapFound); index2++)
 		{
-			overlapFound = overlapFound || testSingleAddrOverlap(split1[index1], split2[index2]);
+			overlapFound = overlapFound || testSingleAddrOverlap(split1[index1], split2[index2], treatipv6);
 		}
 	}
 	return overlapFound;
@@ -2492,7 +2621,7 @@ function doConfirmPassword(validatedFunc, invalidFunc)
 {
 	setControlsEnabled(false, true, UI.VPass);
 
-	var commands = "gargoyle_session_validator -p \"" + (document.getElementById("password").value).replace('$','\\$') + "\" -a \"dummy.browser\" -i \"127.0.0.1\""
+	var commands = "gargoyle_session_validator -p \"" + (document.getElementById("password").value).replace(/\$/g,'\\$') + "\" -a \"dummy.browser\" -i \"127.0.0.1\""
 	var param = getParameterDefinition("commands", commands) + "&" + getParameterDefinition("hash", document.cookie.replace(/^.*hash=/,"").replace(/[\t ;]+.*$/, ""));
 	var stateChangeFunction = function(req)
 	{
@@ -3147,6 +3276,17 @@ function modalPrepare(modalID, title, elements, buttons)
 			{
 				inputEl.value = element.value;
 			}
+			if(element.values !== undefined)
+			{
+				for(var x = 0; x < inputEl.options.length; x++)
+				{
+					inputEl.options[x].selected = false;
+					if(element.values.indexOf(inputEl.options[x].value) > -1)
+					{
+						inputEl.options[x].selected = true;
+					}
+				}
+			}
 			if(element.innertext !== undefined)
 			{
 				inputEl.innerText = element.innertext;
@@ -3184,4 +3324,394 @@ function modalPrepare(modalID, title, elements, buttons)
 			btnContainer.appendChild(btnEl);
 		}
 	});
+}
+
+//IPv6 library
+function ip6_full(address)
+{
+	var tmpAddr = ip6_splitmask(address);
+	//replace ipv4 address
+	var ipv4 = tmpAddr.address.match(/(.*:)([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$)/);
+	if (ipv4) {
+		tmpAddr.address = ipv4[1];
+		ipv4 = ipv4[2].match(/[0-9]+/g);
+		for (var i = 0;i < 4;i ++) {
+			var byte = parseInt(ipv4[i],10);
+			ipv4[i] = ("0" + byte.toString(16)).substr(-2);
+		}
+		tmpAddr.address += ipv4[0] + ipv4[1] + ':' + ipv4[2] + ipv4[3];
+	}
+
+	//leading and trailing ::
+	tmpAddr.address = tmpAddr.address.replace(/^:|:$/g, '');
+
+	var ipv6 = tmpAddr.address.split(':');
+
+	for (var i = 0; i < ipv6.length; i ++) {
+		var hex = ipv6[i];
+		if (hex != "") {
+			//normalize leading zeros
+			ipv6[i] = ("0000" + hex).substr(-4);
+		}
+		else {
+			//normalize grouped zeros ::
+			hex = [];
+			for (var j = ipv6.length; j <= 8; j ++) {
+				hex.push('0000');
+			}
+			ipv6[i] = hex.join(':');
+		}
+	}
+
+	tmpAddr.address = ipv6.join(':');
+
+	return (tmpAddr.bitmask == "" ? tmpAddr.address : tmpAddr.address + "/" + tmpAddr.bitmask);
+}
+
+function ip6_canonical(address)
+{
+	var fullAddress = ip6_full(address);
+	var tmpAddr = ip6_splitmask(fullAddress);
+	var components = tmpAddr.address.split(":");
+	
+	for(var componentIdx = 0; componentIdx < components.length; componentIdx++)
+	{
+		//suppress leading zeros
+		components[componentIdx] = components[componentIdx].replace(/^0+([1-9a-f]{1,3})/i,'$1');
+		//convert remaining all zero fields to a single zero
+		components[componentIdx] = components[componentIdx].replace(/^0+/,'0');
+	}
+
+	//Shorten longest run of all zeros (that is greater than 1 field)
+	var zeroCounts = [];
+	zeroCounts.length = components.length;
+	zeroCounts.fill(0);
+	inZeroChain = false;
+	firstZeroInChain = 0;
+	for(var componentIdx = 0; componentIdx < components.length; componentIdx++)
+	{
+		if(components[componentIdx] == "0")
+		{
+			if(inZeroChain)
+			{
+				for(var zeroIdx = componentIdx; zeroIdx >= firstZeroInChain; zeroIdx--)
+				{
+					zeroCounts[zeroIdx] = zeroCounts[zeroIdx] + 1;
+				}
+			}
+			else
+			{
+				inZeroChain = true;
+				firstZeroInChain = componentIdx;
+				zeroCounts[componentIdx] = zeroCounts[componentIdx] + 1;
+			}
+		}
+		else
+		{
+			inZeroChain = false;
+		}
+	}
+
+	maxZeroCount = Math.max.apply(null, zeroCounts);
+	maxZeroCountIdxs = [];
+	for(var idx = 0; (maxZeroCount > 1) && (idx < zeroCounts.length); idx++)
+	{
+		if(zeroCounts[idx] == maxZeroCount)
+		{
+			maxZeroCountIdxs.push(idx);
+		}
+	}
+
+	if(maxZeroCountIdxs.length > 0)
+	{
+		components.splice(maxZeroCountIdxs[0],maxZeroCount-1)
+		components[maxZeroCountIdxs[0]] = "";
+	}
+
+	if(components[0] == "" && components.length == 1)
+	{
+		components.splice(0,0,"");
+		components.splice(0,0,"");
+	}
+	else if(components[0] == "")
+	{
+		components.splice(0,0,"");
+	}
+	else if(components[components.length-1] == "")
+	{
+		components.push("");
+	}
+
+	return (tmpAddr.bitmask == "" ? components.join(':') : components.join(':') + "/" + tmpAddr.bitmask);
+}
+
+function ip6_splitmask(address)
+{
+	var ipv6 = {};
+	var tmp = address.split("/");
+	if(tmp.length == 2)
+	{
+		ipv6.address = tmp[0];
+		ipv6.bitmask = tmp[1];
+	}
+	else
+	{
+		ipv6.address = tmp[0];
+		ipv6.bitmask = "";
+	}
+
+	return ipv6;
+}
+
+function validateIP6(address)
+{
+	//return codes:
+	//0 == valid IP
+	//1 = improper format
+
+	var errorCode = 0;
+
+	var components = address.split(":");
+	if((address.match(/:{3,}/)) || (address.match(/::.+::/)) ||
+		(address.match(/[^:]:$/)) || (address.match(/^:(?!:)/)))
+	{
+		errorCode = 1;
+	}
+
+	if(components.length < 2 || components.length > 8)
+	{
+		errorCode = 1;
+	}
+
+	if(components.length < 8 && !address.match(/::/))
+	{
+		errorCode = 1;
+	}
+
+	for(var componentIdx = 0; componentIdx < components.length; componentIdx++)
+	{
+		if(!components[componentIdx].match(/^[0-9a-f]{0,4}$/i))
+		{
+			errorCode = 1;
+		}
+	}
+
+	return errorCode;
+}
+
+function proofreadIp6(input)
+{
+	proofreadText(input, validateIP6, 0);
+}
+
+function validateIP6Range(range)
+{
+	//return codes:
+	//0 == valid IP
+	//1 = improper format
+
+	var errorCode = 1;
+
+	if(range.indexOf("/") > 0)
+	{
+		var split=range.split("/");
+		if(split.length == 2)
+		{
+			var ipValid = validateIP6(split[0]);
+			var maskValid = split[1] < -128 || split[1] > 128 ? 1 : 0;
+			errorCode = ipValid == 0 && maskValid == 0 ? 0 : 1;
+		}
+	}
+	else
+	{
+		errorCode = validateIP6(range);
+	}
+
+	return errorCode;
+}
+
+function proofreadIp6Range(input)
+{
+	proofreadText(input, validateIP6Range, 0);
+}
+
+function validateIP6ForceRange(range)
+{
+	//return codes:
+	//0 == valid IP
+	//1 = improper format
+
+	var errorCode = 1;
+
+	if(range.indexOf("/") > 0)
+	{
+		var split=range.split("/");
+		if(split.length == 2)
+		{
+			var ipValid = validateIP6(split[0]);
+			var maskValid = split[1] < 1 || split[1] > 128 ? 1 : 0;
+			errorCode = ipValid == 0 && maskValid == 0 ? 0 : 1;
+		}
+	}
+
+	return errorCode;
+}
+
+function proofreadIp6ForceRange(input)
+{
+	proofreadText(input, validateIP6ForceRange, 0);
+}
+
+function ip6_mask(address, mask)
+{
+	var newAddr = "";
+	var binaddr = ip6addr2bin(address);
+	if(mask < 0)
+	{
+		newAddr = '0'.repeat(128+mask) + binaddr.substr(128+mask);
+	}
+	else
+	{
+		newAddr = binaddr.substr(0,mask) + '0'.repeat(128-mask);
+	}
+	newAddr = ip6bin2addr(newAddr);
+	newAddr = ip6_canonical(newAddr);
+
+	return newAddr;
+}
+
+function ip6_scope(address)
+{
+	var retVal = [null, null];
+	if(ip6_mask(address,3) == "2000::")
+	{
+		retVal = ["Global", "Global Unicast Address"];
+	}
+	if(ip6_mask(address,32) == "2001::")
+	{
+		retVal = ["Global", "Teredo Tunnel"];
+	}
+	if(ip6_mask(address,96) == "64:ff9b::")
+	{
+		retVal = ["Global", "IPv4/IPv6 Translation"];
+	}
+	if(ip6_mask(address,8) == "ff00::")
+	{
+		retVal = ["Global", "Global Multicast Address"];
+	}
+	if(ip6_mask(address,7) == "fc00::")
+	{
+		retVal = ["Global", "Unique Local Address"];
+	}
+	if(ip6_mask(address,10) == "fe80::")
+	{
+		retVal = ["Link", "Link-local Address"];
+	}
+
+	return retVal;
+}
+
+function getIPFamily(address)
+{
+	var retVal = null;
+
+	if(validateIpRange(address) == 0)
+	{
+		retVal = "IPv4";
+	}
+	else if(validateIP6Range(address) == 0)
+	{
+		retVal = "IPv6";
+	}
+
+	return retVal;
+}
+
+function isIPv4(address)
+{
+	return getIPFamily(address) == "IPv4";
+}
+
+function isIPv6(address)
+{
+	return getIPFamily(address) == "IPv6";
+}
+
+function validateMultipleIp6s(ips)
+{
+	ips = ips.replace(/^[\t ]+/g, "");
+	ips = ips.replace(/[\t ]+$/g, "");
+	var splitIps = ips.split(/[\t ]*,[\t ]*/);
+	var valid = splitIps.length > 0 ? 0 : 1; //1= error, 0=true
+	while(valid == 0 && splitIps.length > 0)
+	{
+		var nextIp = splitIps.pop();
+		if(nextIp.match(/-/))
+		{
+			var nextSplit = nextIp.split(/[\t ]*-[\t ]*/);
+			if( nextSplit.length==2 && validateIP6(nextSplit[0]) == 0 && validateIP6(nextSplit[1]) == 0)
+			{
+				var ipFull1 = ip6_full(nextSplit[0]);
+				var ipFull2 = ip6_full(nextSplit[1]);
+				valid = ipFull1 <= ipFull2 ? 0 : 1;
+			}
+			else
+			{
+				valid = 1;
+			}
+		}
+		else
+		{
+			valid = validateIP6Range(nextIp);
+		}
+	}
+	return valid;
+}
+
+function proofreadMultipleIp6s(input)
+{
+	proofreadText(input, validateMultipleIp6s, 0);
+}
+
+function validateMultipleIp6sOrMacs(ips)
+{
+	ips = ips.replace(/^[\t ]+/g, "");
+	ips = ips.replace(/[\t ]+$/g, "");
+	var splitIps = ips.split(/[\t ]*,[\t ]*/);
+	var valid = splitIps.length > 0 ? 0 : 1; //1= error, 0=true
+	while(valid == 0 && splitIps.length > 0)
+	{
+		var nextIp = splitIps.pop();
+		if(nextIp.match(/-/))
+		{
+			var nextSplit = nextIp.split(/[\t ]*-[\t ]*/);
+			if( nextSplit.length==2 && validateIP6(nextSplit[0]) == 0 && validateIP6(nextSplit[1]) == 0)
+			{
+				var ipFull1 = ip6_full(nextSplit[0]);
+				var ipFull2 = ip6_full(nextSplit[1]);
+				valid = ipFull1 <= ipFull2 ? 0 : 1;
+			}
+			else
+			{
+				valid = 1;
+			}
+		}
+		else
+		{
+			if(getIPFamily(nextIp) == null)
+			{
+				valid = validateMac(nextIp);
+			}
+			else
+			{
+				valid = validateIP6Range(nextIp);
+			}
+		}
+	}
+	return valid;
+}
+
+function proofreadMultipleIp6sOrMacs(input)
+{
+	proofreadText(input, validateMultipleIp6sOrMacs, 0);
 }

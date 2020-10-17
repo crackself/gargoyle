@@ -98,6 +98,12 @@
 				<div style="display: block;" id="remote_web_divider" class="internal_divider"></div>
 
 				<div id="remote_web_protocol_container" class="row form-group">
+					<div id="noip6redi" class="col-lg-12">
+						<div class="alert alert-warning" role="alert">
+							<%~ NoIP6Redi %>
+						</div>
+					</div>
+
 					<label class="col-xs-5" id="remote_web_protocol_label" for="remote_web_protocol"><%~ RemoteWebAccess %>:</label>
 					<span class="col-xs-7">
 						<select class="form-control" id="remote_web_protocol" onchange="updateVisibility()">
@@ -228,19 +234,19 @@
 				<div class="row form-group" id="authorised_keys_table_container">
 					<label id="authorized_keys_label" class="col-xs-5" for="authorized_keys_table_container"><%~ SSHKeys %>:</label>
 					<div id="authorized_keys_table_container" class="col-xs-7 table-responsive"></div>
-					<div id="ssh_help">
-						<span class="col-xs-12"><a id="ssh_help_ref" href="javascript:setDescriptionVisibility('ssh_help')"><%~ MoreInfo %></a></span>
-						<span class="col-xs-12" id="ssh_help_txt" style="display:none">
-							<p><%~ SSHHelp1 %></p>
-							<p><%~ SSHHelp2 %></p>
-							<p><%~ SSHHelp3 %></p>
-							<ul>
-								<li><%~ SSHHelp3a %></li>
-								<li><%~ SSHHelp3b %></li>
-							</ul>
-							<p><%~ SSHHelp4 %></p>
-						</span>
-					</div>
+				</div>
+				<div class="row form-group" id="ssh_help">
+					<span class="col-xs-12"><a id="ssh_help_ref" href="javascript:setDescriptionVisibility('ssh_help')"><%~ MoreInfo %></a></span>
+					<span class="col-xs-12" id="ssh_help_txt" style="display:none">
+						<p><%~ SSHHelp1 %></p>
+						<p><%~ SSHHelp2 %></p>
+						<p><%~ SSHHelp3 %></p>
+						<ul>
+							<li><%~ SSHHelp3a %></li>
+							<li><%~ SSHHelp3b %></li>
+						</ul>
+						<p><%~ SSHHelp4 %></p>
+					</span>
 				</div>
 			</div>
 		</div>

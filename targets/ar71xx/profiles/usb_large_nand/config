@@ -157,6 +157,7 @@ CONFIG_TARGET_UBIFS_JOURNAL_SIZE=""
 #
 # Global build settings
 #
+# CONFIG_JSON_OVERVIEW_IMAGE_INFO is not set
 # CONFIG_ALL_NONSHARED is not set
 # CONFIG_ALL_KMODS is not set
 # CONFIG_ALL is not set
@@ -2331,6 +2332,7 @@ CONFIG_PACKAGE_usign=y
 CONFIG_PACKAGE_gargoyle=y
 CONFIG_PACKAGE_gargoyle-i18n=y
 CONFIG_PACKAGE_plugin-gargoyle-adblock=m
+CONFIG_PACKAGE_plugin-gargoyle-cron=m
 CONFIG_PACKAGE_plugin-gargoyle-ddns=y
 CONFIG_PACKAGE_plugin-gargoyle-email-notifications=m
 CONFIG_PACKAGE_plugin-gargoyle-email-notifications-nossl=m
@@ -2373,6 +2375,7 @@ CONFIG_PACKAGE_plugin-gargoyle-usb-storage-noshare=y
 CONFIG_PACKAGE_plugin-gargoyle-webcam=y
 CONFIG_PACKAGE_plugin-gargoyle-webshell=m
 CONFIG_PACKAGE_plugin-gargoyle-wifi-schedule=y
+CONFIG_PACKAGE_plugin-gargoyle-wireguard=y
 CONFIG_PACKAGE_plugin-gargoyle-wol=y
 
 #
@@ -2396,6 +2399,11 @@ CONFIG_PACKAGE_plugin-gargoyle-wol=y
 # CONFIG_PACKAGE_trace-cmd is not set
 # CONFIG_PACKAGE_trace-cmd-extra is not set
 # CONFIG_PACKAGE_valgrind is not set
+
+#
+# Extra packages
+#
+CONFIG_PACKAGE_wireguard-tools=y
 
 #
 # Firmware
@@ -2745,7 +2753,7 @@ CONFIG_PACKAGE_kmod-ipt-nat6=y
 CONFIG_PACKAGE_kmod-ipt-offload=y
 # CONFIG_PACKAGE_kmod-ipt-physdev is not set
 CONFIG_PACKAGE_kmod-ipt-raw=y
-# CONFIG_PACKAGE_kmod-ipt-raw6 is not set
+CONFIG_PACKAGE_kmod-ipt-raw6=y
 # CONFIG_PACKAGE_kmod-ipt-rpfilter is not set
 # CONFIG_PACKAGE_kmod-ipt-tee is not set
 CONFIG_PACKAGE_kmod-ipt-timerange=y
@@ -2894,9 +2902,11 @@ CONFIG_PACKAGE_kmod-slhc=y
 CONFIG_PACKAGE_kmod-tcp-bbr=y
 # CONFIG_PACKAGE_kmod-trelay is not set
 CONFIG_PACKAGE_kmod-tun=y
+CONFIG_PACKAGE_kmod-udptunnel4=y
+CONFIG_PACKAGE_kmod-udptunnel6=y
 # CONFIG_PACKAGE_kmod-veth is not set
 # CONFIG_PACKAGE_kmod-vxlan is not set
-# CONFIG_PACKAGE_kmod-wireguard is not set
+CONFIG_PACKAGE_kmod-wireguard=y
 
 #
 # Other modules
@@ -3774,7 +3784,7 @@ CONFIG_PACKAGE_ebtables=y
 # CONFIG_PACKAGE_ebtables-utils is not set
 CONFIG_PACKAGE_ip6tables=y
 # CONFIG_PACKAGE_ip6tables-extra is not set
-# CONFIG_PACKAGE_ip6tables-mod-nat is not set
+CONFIG_PACKAGE_ip6tables-mod-nat=y
 CONFIG_PACKAGE_iptables=y
 # CONFIG_IPTABLES_CONNLABEL is not set
 # CONFIG_IPTABLES_NFTABLES is not set
@@ -3859,7 +3869,7 @@ CONFIG_PACKAGE_ip-tiny=y
 # CONFIG_PACKAGE_lldpd is not set
 # CONFIG_PACKAGE_nstat is not set
 # CONFIG_PACKAGE_rdma is not set
-# CONFIG_PACKAGE_relayd is not set
+CONFIG_PACKAGE_relayd=y
 # CONFIG_PACKAGE_ss is not set
 CONFIG_PACKAGE_tc=y
 
@@ -3940,8 +3950,7 @@ CONFIG_OPENVPN_gargoyle_openssl_ENABLE_DEF_AUTH=y
 CONFIG_OPENVPN_gargoyle_openssl_ENABLE_PF=y
 # CONFIG_OPENVPN_gargoyle_openssl_ENABLE_IPROUTE2 is not set
 CONFIG_OPENVPN_gargoyle_openssl_ENABLE_SMALL=y
-# CONFIG_PACKAGE_wireguard is not set
-# CONFIG_PACKAGE_wireguard-tools is not set
+CONFIG_PACKAGE_wireguard=y
 
 #
 # WWAN
@@ -4073,6 +4082,7 @@ CONFIG_DRIVER_11W_SUPPORT=y
 # CONFIG_PACKAGE_wpa-supplicant-wolfssl is not set
 # CONFIG_PACKAGE_wpad is not set
 CONFIG_PACKAGE_wpad-basic=m
+# CONFIG_PACKAGE_wpad-basic-wolfssl is not set
 # CONFIG_PACKAGE_wpad-mesh-openssl is not set
 # CONFIG_PACKAGE_wpad-mesh-wolfssl is not set
 # CONFIG_PACKAGE_wpad-mini is not set
