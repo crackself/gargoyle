@@ -14,7 +14,7 @@ var currentLanIp;
 
 var googleDns = ["8.8.8.8", "8.8.4.4" ];
 var aliDns = ["223.5.5.5", "223.6.6.6" ];
-var 114Dns = ["114.114.114.114", "114.114.115.115" ];
+var c114Dns = ["114.114.114.114", "114.114.115.115" ];
 var adguardDns = ["176.103.130.130", "176.103.130.131" ];
 var adguardDnsDF = ["176.103.130.132", "176.103.130.134" ];
 var openDns = ["208.67.222.222", "208.67.220.220" ];
@@ -1025,7 +1025,7 @@ inputIds = [
 			}
 			else if(dnsSource == "c114" && notBridge )
 			{
-				dnsList = 114Dns;
+				dnsList = c114Dns;
 			}
 			else if(dnsSource == "adguard" && notBridge )
 			{
@@ -2145,9 +2145,9 @@ function resetData()
 	{
 		dnsType = "ali";
 	}
-	else if( dnsTableData.join(",") == 114Dns.join(",") || dnsTableData.join(",") == 114Dns.reverse().join(",") )
+	else if( dnsTableData.join(",") == c114Dns.join(",") || dnsTableData.join(",") == c114Dns.reverse().join(",") )
 	{
-		dnsType = "114";
+		dnsType = "c114";
 	}
 	else if( dnsTableData.join(",") == adguardDns.join(",") || dnsTableData.join(",") == adguardDns.reverse().join(",") )
 	{
