@@ -1065,7 +1065,7 @@ inputIds = [
 					{
 						dnsList.push(dnsData[dnsIndex][0]);
 					}
-					elseif(isIPv6(dnsData[dnsIndex][0]))
+					else if(isIPv6(dnsData[dnsIndex][0]))
 					{
 						dnsList6.push(dnsData[dnsIndex][0]);
 					}

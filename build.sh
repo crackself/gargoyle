@@ -11,8 +11,8 @@ set_constant_variables()
 	compress_js_dir="$top_dir/compressed_javascript"
 	compress_css_dir="$top_dir/compressed_css"
 	
-	node_version_tag="v6.3.1"
-	npm_version_tag="v3.10.4"
+	node_version_tag="v10.19.0"
+	npm_version_tag="v6.14.4"
 
 
 	#script for building netfilter patches
@@ -33,8 +33,7 @@ set_version_variables()
 	# set precise commit in repo to use 
 	# you can set this to an alternate commit 
 	# or empty to checkout latest
-	#openwrt_commit="5a1e4a7fdb2d732a485afb7cdcfc359e15ac259e"
-	openwrt_commit=""
+	openwrt_commit="78c4c04dd7979a7f6d3cadeb1783b6c38d63b575"
 	openwrt_abbrev_commit=$( echo "$openwrt_commit" | cut -b 1-7 )
 	
 
@@ -371,13 +370,10 @@ if [ "$js_compress" = "true" ] || [ "$js_compress" = "TRUE" ] || [ "$js_compress
 		if [ ! -e "$top_dir/node/bin/npm" ] ; then
 			rm -rf "$top_dir"/npm
 			cd "$top_dir"
-			git clone git://github.com/npm/npm.git
+			git clone git://github.com/npm/cli.git "$top_dir/npm"
 			cd npm
 			git checkout "$npm_version_tag"
-			export PREFIX="$top_dir/node"
-			./configure
-			make
-			make install
+			node bin/npm-cli.js install -gf
 		fi
 
 		npm_test=$( npm -v 2>/dev/null )
