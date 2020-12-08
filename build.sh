@@ -599,7 +599,7 @@ for target in $targets ; do
 
 	#if target is custom, checkout optional packages and copy all that don't 
 	#share names with gargoyle-specific packages to build directory
-	if [ "$target" = "custom" ] ; then
+	if [ "$target" = "$target" ] ; then
 		if [ ! -d "$openwrt_package_dir" ] ; then
 			
 			git clone https://github.com/openwrt/packages.git "$openwrt_package_dir"
