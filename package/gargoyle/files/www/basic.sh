@@ -715,6 +715,10 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 								<option value="opendnsfs"><%~ OpnSrvsFS %></option>
 								<option value="quad9"><%~ Quad9 %></option>
 								<option value="cloudflare"><%~ Cloudflare %></option>
+								<option value="adguarddf"><%~ AdgdfSrvs %></option>
+								<option value="adguardfp"><%~ AdgfpSrvs %></option>
+								<option value="adguardnf"><%~ AdgnfSrvs %></option>
+								<option value="alidns"><%~ AliSrvs %></option>
 								<option value="custom"><%~ CstDSrv %></option>
 							</select>
 							<div id="lan_dns_custom_container" class="second_row_right_column">
