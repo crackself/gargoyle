@@ -2144,6 +2144,7 @@ function resetData()
 	else if( dnsTableData.join(",") == cloudflareDns.join(",") || dnsTableData.join(",") == cloudflareDns.reverse().join(",") )
 	{
 		dnsType = "cloudflare";
+	}
 	else if( dnsTableData.join(",") == adguardDFDns.join(",") || dnsTableData.join(",") == adguardDFDns.reverse().join(",") )
 	{
 		dnsType = "adguarddf";
@@ -2159,6 +2160,7 @@ function resetData()
 	else if( dnsTableData.join(",") == aliDns.join(",") || dnsTableData.join(",") == aliDns.reverse().join(",") )
 	{
 		dnsType = "alidns";
+	}
 	setSelectedValue("lan_dns_source", dnsType);
 	setDnsSource(document.getElementById("lan_dns_source"))
 
