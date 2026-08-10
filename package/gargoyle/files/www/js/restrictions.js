@@ -775,6 +775,7 @@ function updateIPControls(rulePrefix)
 		setSelectedValue(rulePrefix + "remote_ip_type", "all", document);
 		document.getElementById(rulePrefix + "remote_ip_type").disabled = true;
 
+		document.getElementById(rulePrefix + "applies_to_4_container").style.display = "block";
 		document.getElementById(rulePrefix + "applies_to_6_container").style.display = "none";
 
 		//"Both" is a MAC-only mode, so tell the user why an IP address is rejected here
