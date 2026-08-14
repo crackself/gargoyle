@@ -775,7 +775,15 @@ function updateIPControls(rulePrefix)
 		setSelectedValue(rulePrefix + "remote_ip_type", "all", document);
 		document.getElementById(rulePrefix + "remote_ip_type").disabled = true;
 
+		document.getElementById(rulePrefix + "applies_to_4_container").style.display = "block";
 		document.getElementById(rulePrefix + "applies_to_6_container").style.display = "none";
+
+		//"Both" is a MAC-only mode, so tell the user why an IP address is rejected here
+		var anyHint = document.getElementById(rulePrefix + "applies_to_hint");
+		if(anyHint != null)
+		{
+			anyHint.innerHTML = restStr.HstAddrAny;
+		}
 
 		//Filter out IPs from the IP4 table. We should only have MACs if in "any" mode
 		var tabContainer = document.getElementById(rulePrefix + "applies_to_table_container");
@@ -796,6 +804,11 @@ function updateIPControls(rulePrefix)
 	}
 	else
 	{
+		var v4Hint = document.getElementById(rulePrefix + "applies_to_hint");
+		if(v4Hint != null)
+		{
+			v4Hint.innerHTML = restStr.HstAddr;
+		}
 		document.getElementById(rulePrefix + "remote_ip_type").disabled = false;
 		document.getElementById(rulePrefix + "applies_to_4_container").style.display = selectedVal == "ipv4" ? "block" : "none";
 		document.getElementById(rulePrefix + "applies_to_6_container").style.display = selectedVal == "ipv4" ? "none" : "block";

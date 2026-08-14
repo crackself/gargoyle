@@ -26,15 +26,15 @@ set_version_variables()
 {
 
 	#openwrt branch
-	branch_name="22.03"
-	branch_id="openwrt-22.03"
-	packages_branch="openwrt-22.03"
+	branch_name="24.10"
+	branch_id="openwrt-24.10"
+	packages_branch="openwrt-24.10"
 
 
 	# set precise commit in repo to use 
 	# you can set this to an alternate commit 
 	# or empty to checkout latest
-	openwrt_commit="f372b715d439d03d81755062d77f80eb4ce77e33"
+	openwrt_commit="0b795ce79e23b553aa184080c390f9ce92a2b6d4"
 	openwrt_abbrev_commit=$( echo "$openwrt_commit" | cut -b 1-7 )
 	
 
@@ -285,6 +285,24 @@ copy_buildinfo ()
 	#copy build config info
 	if [ -e "bin/targets/$owrt_tgt/$subtgt_arch/config.buildinfo" ] ; then
 		cp "bin/targets/$owrt_tgt/$subtgt_arch/config.buildinfo" "$top_dir/images/$tgt/$tgt-$dprof.buildinfo"
+	fi
+}
+
+copy_sha256sums ()
+{
+	local owrt_tgt="$1"
+	local subtgt_arch="$2"
+	local tgt="$3"
+	local dprof="$4"
+	
+	#copy sha256sums
+	if [ -e "bin/targets/$owrt_tgt/$subtgt_arch/sha256sums" ] ; then
+		cp "bin/targets/$owrt_tgt/$subtgt_arch/sha256sums" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
+		sed -i "s/openwrt/gargoyle_$lower_short_gargoyle_version/g" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
+		sed -i "s/config\.buildinfo/$tgt-$dprof.buildinfo/g" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
+		sed -i "/version\.buildinfo/d" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
+		sed -i "/gargoyle.*\.manifest/d" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
+		sed -i "/feeds\.buildinfo/d" "$top_dir/images/$tgt/$tgt-$dprof.sha256sums"
 	fi
 }
 
@@ -699,6 +717,16 @@ for target in $targets ; do
 	
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "$openwrt_abbrev_commit" "package/base-files/files/etc/banner" "."
+		#Set gargoyle official version parameter in gargoyle package
+		echo "OFFICIAL_VERSION:=$full_gargoyle_version" > .ver
+		echo "GARGOYLE_DISTRIB_RELEASE:=$short_gargoyle_version" >> .ver
+		echo "GARGOYLE_DISTRIB_REVISION:=$gargoyle_git_revision" >> .ver
+		echo "GARGOYLE_DISTRIB_TARGET:=$openwrt_target" >> .ver
+		echo "GARGOYLE_DISTRIB_PROFILE:=$profile_name" >> .ver
+		echo "GARGOYLE_DISTRIB_DESCRIPTION:=$full_gargoyle_version" >> .ver
+		cat .ver "$package_dir/gargoyle/Makefile" >.vermake
+		rm .ver
+		mv .vermake "$top_dir/$target-src/package/gargoyle/Makefile"
 
 		make $num_build_thread_str GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
@@ -721,6 +749,16 @@ for target in $targets ; do
 
 		openwrt_target=$(get_target_from_config "./.config")
 		create_gargoyle_banner "$openwrt_target" "$profile_name" "$build_date" "$short_gargoyle_version" "$gargoyle_git_revision" "$branch_name" "$openwrt_abbrev_commit" "package/base-files/files/etc/banner" "."
+		#Set gargoyle official version parameter in gargoyle package
+		echo "OFFICIAL_VERSION:=$full_gargoyle_version" > .ver
+		echo "GARGOYLE_DISTRIB_RELEASE:=$short_gargoyle_version" >> .ver
+		echo "GARGOYLE_DISTRIB_REVISION:=$gargoyle_git_revision" >> .ver
+		echo "GARGOYLE_DISTRIB_TARGET:=$openwrt_target" >> .ver
+		echo "GARGOYLE_DISTRIB_PROFILE:=$profile_name" >> .ver
+		echo "GARGOYLE_DISTRIB_DESCRIPTION:=$full_gargoyle_version" >> .ver
+		cat .ver "$package_dir/gargoyle/Makefile" >.vermake
+		rm .ver
+		mv .vermake "$top_dir/$target-src/package/gargoyle/Makefile"
 
 		make $num_build_thread_str V=s GARGOYLE_VERSION="$numeric_gargoyle_version" GARGOYLE_VERSION_NAME="$lower_short_gargoyle_version" GARGOYLE_PROFILE="$default_profile"
 
@@ -794,6 +832,7 @@ for target in $targets ; do
 	fi
 
 	copy_buildinfo "$openwrt_target" "$subtarget_arch" "$target" "$default_profile"
+	copy_sha256sums "$openwrt_target" "$subtarget_arch" "$target" "$default_profile"
 
 	#if we didn't build anything, die horribly
 	if [ -z "$image_files" ] ; then
@@ -890,6 +929,7 @@ for target in $targets ; do
 		fi
 
 		copy_buildinfo "$openwrt_target" "$subtarget_arch" "$target" "$profile_name"
+		copy_sha256sums "$openwrt_target" "$subtarget_arch" "$target" "$profile_name"
 	
 		if [ "$distribution" = "true" ] ; then
 			mkdir -p "$top_dir/Distribution/Images/$target-$profile_name"

@@ -2,6 +2,8 @@ var wgStr = new Object();
 
 function resetData()
 {
+	uci = uciOriginal.clone();
+
 	serverEnabled = uciOriginal.get("wireguard_gargoyle","server","enabled");
 	clientEnabled = uciOriginal.get("wireguard_gargoyle","client","enabled");
 	serverEnabled = serverEnabled == "true" || serverEnabled == "1" ? true : false;
@@ -380,6 +382,21 @@ function togglePass(name)
 	}
 }
 
+function toggleTunnelNameWarning()
+{
+	alertDiv = byId('warn_tunname_toolong');
+	name = byId('wireguard_allowed_client_name').value;
+	if(name.length > 12)
+	{
+		// Limit is 15 (wg- + 12 chars)
+		alertDiv.style.display = 'block';
+	}
+	else
+	{
+		alertDiv.style.display = 'none';
+	}
+}
+
 function generateKeyPair(section)
 {
 	commands = "mkdir -p /tmp/wireguard\ncd /tmp/wireguard\nwg genkey | tee ./privatekey | wg pubkey > ./publickey\ncat /tmp/wireguard/*";
@@ -719,7 +736,7 @@ function addAc()
 		var subnet = subnetIp != "" && subnetMask != "" ? subnetIp + "/" + subnetMask : ""
 		var pubkey       = document.getElementById("wireguard_allowed_client_pubkey").value
 	
-		var id = name.replace(/[\t\r\n ]+/g, "_").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+		var id = name.replace(/[\t\r\n -]+/g, "_").toLowerCase().replace(/[^a-z0-9_]/g, "");
 		var idCount = 1;
 		var testId = id
 		while(uci.get("wireguard_gargoyle", testId) != "")
@@ -770,12 +787,17 @@ function setRemoteNames(selectedRemote)
 	for(ddi=0; ddi < definedDdns.length; ddi++)
 	{
 		var enabled = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "enabled")
-		var domain  = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "domain").replace("@",".")
+		var domain  = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "domain");
+		var testDomain = uciOriginal.get("ddns_gargoyle", definedDdns[ddi], "test_domain");
+		domain = testDomain == "" ? domain : testDomain;
 		if( (enabled != "0" && enabled != "false") && domain != "")
 		{
-			names.push(wgStr.DDNS+": " + domain)
-			values.push(domain)
-			selectedFound = selectedRemote == domain ? true : selectedFound
+			if(values.indexOf(domain) == -1)
+			{
+				names.push(wgStr.DDNS+": " + domain)
+				values.push(domain)
+				selectedFound = selectedRemote == domain ? true : selectedFound
+			}
 		}
 	}
 	selectedFound = (selectedRemote == currentWanIp) || selectedFound
@@ -817,6 +839,8 @@ function setAllowedClientVisibility()
 	{
 		document.getElementById("wireguard_allowed_client_pubkey").removeAttribute("readonly");
 	}
+
+	checkWgClientSubnetOverlap();
 }
 
 function validateAc(internalServerIp, internalServerMask)
@@ -855,9 +879,74 @@ function validateAc(internalServerIp, internalServerMask)
 		var subnetIpEl   = document.getElementById(prefix + "subnet_ip")
 		var subnetMaskEl = document.getElementById(prefix + "subnet_mask")
 		subnetIpEl.value = applyMask(subnetIpEl.value, subnetMaskEl.value)
+
+		// Reject a routed "subnet behind the client" that overlaps a subnet
+		// Gargoyle already controls (its own LAN, or the WireGuard server
+		// subnet). route_allowed_ips=1 installs a route sending that subnet
+		// into the tunnel; if it overlaps the LAN, the router black-holes its
+		// own LAN traffic and the admin is locked out (discussion #128).
+		// WireGuard saves have no auto-revert, so this proofread is the guard.
+		var controlled = wgControlledSubnets(internalServerIp, internalServerMask)
+		for(var ci = 0; ci < controlled.length; ci++)
+		{
+			if(wgSubnetsOverlap(subnetIpEl.value, subnetMaskEl.value, controlled[ci][0], controlled[ci][1]))
+			{
+				errors.push(controlled[ci][2])
+			}
+		}
 	}
 
 	return errors;
+}
+
+// Two IPv4 subnets overlap iff their network addresses are equal under the
+// shorter (coarser) of the two masks -- i.e. one contains the other.
+function wgSubnetsOverlap(ipA, maskA, ipB, maskB)
+{
+	var m = parseMask(maskA) & parseMask(maskB)
+	return (parseIp(ipA) & m) == (parseIp(ipB) & m)
+}
+
+// The subnets Gargoyle already controls, that a client's routed subnet must
+// not overlap: the router's own LAN and (when configured) the WireGuard
+// server subnet. Each entry is [ip, mask, errorString].
+function wgControlledSubnets(serverIp, serverMask)
+{
+	var subs = []
+	var lanIp   = uciOriginal.get("network", "lan", "ipaddr")
+	var lanMask = uciOriginal.get("network", "lan", "netmask")
+	// OpenWrt 24.10+ may store ipaddr as a CIDR list ("192.168.1.1/24"); split it.
+	if(lanIp instanceof Array) { lanIp = lanIp.length > 0 ? lanIp[0] : "" }
+	if(typeof lanIp == "string" && lanIp.indexOf("/") != -1)
+	{
+		var parts = lanIp.split("/"); lanIp = parts[0]
+		if(lanMask == null || lanMask == "") { lanMask = parts[1] }
+	}
+	if(lanIp && lanMask) { subs.push([lanIp, lanMask, wgStr.OvlpLan]) }
+	if(serverIp && serverMask) { subs.push([serverIp, serverMask, wgStr.OvlpWg]) }
+	return subs
+}
+
+// Live warning shown as the routed-subnet fields are edited (the earlier nudge
+// before the proofread's hard stop on save). Reuses the same overlap check.
+function checkWgClientSubnetOverlap()
+{
+	var warn = document.getElementById("wireguard_allowed_client_subnet_warn")
+	if(warn == null) { return }
+	var ip   = document.getElementById("wireguard_allowed_client_subnet_ip").value
+	var mask = document.getElementById("wireguard_allowed_client_subnet_mask").value
+	var hit = false
+	if(ip.match(/^\d+\.\d+\.\d+\.\d+$/) && mask != "")
+	{
+		var srvIp   = document.getElementById("wireguard_server_ip").value
+		var srvMask = document.getElementById("wireguard_server_mask").value
+		var controlled = wgControlledSubnets(srvIp, srvMask)
+		for(var ci = 0; ci < controlled.length; ci++)
+		{
+			if(wgSubnetsOverlap(ip, mask, controlled[ci][0], controlled[ci][1])) { hit = true }
+		}
+	}
+	warn.style.display = hit ? "" : "none"
 }
 
 function parseMask(mask)
@@ -1026,7 +1115,7 @@ function uploaded()
 	uploadFrame = document.getElementById("client_add_target");
 	uploadFrameDoc = (uploadFrame.contentDocument) ? uploadFrame.contentDocument : uploadFrame.contentWindow.document;
 
-	cfgcontents = uploadFrameDoc.getElementById("cfgcontents").innerText;
+	cfgcontents = uploadFrameDoc.getElementById("cfgcontents").innerHTML;
 	parseCfg(cfgcontents.split("\n"));
 }
 
@@ -1070,35 +1159,50 @@ function parseCfg(cfgdata)
 		var cfgdataidx = 0;		
 		for(cfgdataidx = interfaceStart+1; cfgdataidx <= interfaceStop; cfgdataidx++)
 		{
-			var lineParts = cfgdata[cfgdataidx].split(" = ");
-			if(lineParts[0] == "Address")
+			var lineParts = cfgdata[cfgdataidx].split("=");
+			if(lineParts.length > 1)
 			{
-				var subLineParts = lineParts[1].split("/");
-				document.getElementById("wireguard_client_ip").value = subLineParts[0];
-			}
-			else if(lineParts[0] == "PrivateKey")
-			{
-				document.getElementById("wireguard_client_privkey").value = lineParts[1];
-				setPubkeyFromPrivkey(lineParts[1],"wireguard_client_pubkey");
+				var key = lineParts[0].trim();
+				var val = lineParts.slice(1).join('=').trim();
+
+				if(key == "Address")
+				{
+					var subLineParts = val.split("/");
+					document.getElementById("wireguard_client_ip").value = subLineParts[0];
+				}
+				else if(key == "PrivateKey")
+				{
+					document.getElementById("wireguard_client_privkey").value = val;
+					setPubkeyFromPrivkey(val,"wireguard_client_pubkey");
+				}
 			}
 		}
 		// Do peer (server)
 		for(cfgdataidx = peerStart+1; cfgdataidx <= peerStop; cfgdataidx++)
 		{
-			var lineParts = cfgdata[cfgdataidx].split(" = ");
-			if(lineParts[0] == "AllowedIPs")
+			var lineParts = cfgdata[cfgdataidx].split("=");
+			if(lineParts.length > 1)
 			{
-				document.getElementById("wireguard_client_allowed_ips").value = lineParts[1];
-			}
-			else if(lineParts[0] == "Endpoint")
-			{
-				var subLineParts = lineParts[1].split(":");
-				document.getElementById("wireguard_client_server_host").value = subLineParts[0];
-				document.getElementById("wireguard_client_server_port").value = subLineParts[1];
-			}
-			else if(lineParts[0] == "PublicKey")
-			{
-				document.getElementById("wireguard_client_server_pubkey").value = lineParts[1];
+				var key = lineParts[0].trim();
+				var val = lineParts.slice(1).join('=').trim();
+
+				if(key == "AllowedIPs")
+				{
+					document.getElementById("wireguard_client_allowed_ips").value = lineParts[1];
+				}
+				else if(key == "Endpoint")
+				{
+					var subLineParts = val.split(":");
+					if(subLineParts.length > 1)
+					{
+						document.getElementById("wireguard_client_server_host").value = subLineParts[0];
+						document.getElementById("wireguard_client_server_port").value = subLineParts[1];
+					}
+				}
+				else if(key == "PublicKey")
+				{
+					document.getElementById("wireguard_client_server_pubkey").value = val;
+				}
 			}
 		}
 		wireguard_client_config_manual.checked = true;

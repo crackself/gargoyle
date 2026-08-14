@@ -151,9 +151,52 @@ function saveChanges()
 		uci.remove('network', 'brlan_dev', 'ports');
 		uci.set('network', 'brlan_dev', 'ports', defaultLanIf.split(" "));
 		// Create wan_dev
-		preCommands = preCommands + "\nuci set network.wan_" + defaultWanIf + "_dev=device\n";
-		uci.set('network', 'wan_' + defaultWanIf + '_dev', 'name', defaultWanIf);
-		uci.set('network', 'wan_' + defaultWanIf + '_dev', 'macaddr', defaultWanMac.toLowerCase());
+		preCommands = preCommands + "\nuci set network.wan_" + defaultWanIf.replace('.','_') + "_dev=device\n";
+		uci.set('network', 'wan_' + defaultWanIf.replace('.','_') + '_dev', 'name', defaultWanIf);
+		uci.set('network', 'wan_' + defaultWanIf.replace('.','_') + '_dev', 'macaddr', defaultWanMac.toLowerCase());
+		// Remove old WAN VLANs
+		var switchVLAN = uci.get('network','switch_wan_vlan');
+		var switchSecs = uci.getAllSectionsOfType('network','switch_vlan');
+		if(switchSecs.length > 0 && switchVLAN == '' && defaultWanIf.indexOf('.') > -1)
+		{
+			// We have switch config but switch_wan_vlan missing and original WAN device was a VLAN, do nothing
+		}
+		else if(switchVLAN == 'switch_vlan')
+		{
+			// Reset the switch_wan_vlan
+			var origvlan = uci.get('network','switch_wan_vlan','orig_vlan');
+			var origports = uci.get('network','switch_wan_vlan','orig_ports');
+			var vlan = uci.get('network','switch_wan_vlan','vlan');
+			if(origvlan != '' && origports != '')
+			{
+				uci.set('network','switch_wan_vlan','vlan',origvlan);
+				uci.set('network','switch_wan_vlan','ports',origports);
+				uci.remove('network','switch_wan_vlan','orig_vlan');
+				uci.remove('network','switch_wan_vlan','orig_ports');
+				// Clean up old wan_dev not needed
+				var device = defaultWanIf.split('.')[0];
+				if(origvlan != vlan)
+				{
+					uci.removeSection('network','wan_' + device + '_' + vlan + '_dev');
+				}
+			}
+			else
+			{
+				// No information on original settings, assume it is OK
+			}
+		}
+		else
+		{
+			var devList = uci.getAllSectionsOfType('network','device');
+			devList.forEach(function(devName) {
+				if(devName.match(/wan_vlan[0-9]+_dev/) !== null)
+				{
+					preCommands = preCommands + "\nuci -q del network." + devName;
+					uci.removeSection('network',devName);
+					uciCompare.removeSection('network',devName);
+				}
+			});
+		}
 		if( document.getElementById("global_gateway").checked )
 		{
 			//If we were previously bridged, and are now going to a gateway, we re-enable DHCP for the user
@@ -218,11 +261,52 @@ function saveChanges()
 				}
 				else if(getSelectedValue("wan_protocol").match(/iph/))
 				{
-					uci.set('network', 'wan', 'ifname', iphif);
+					uci.set('network', 'wan', 'device', iphif);
 				}
 				else
 				{
-					uci.set('network', 'wan', 'device', defaultWanIf);
+					if(byId('wan_use_vlan').checked && byId('wan_vlan_container').style.display != 'none')
+					{
+						var vid = byId('wan_vlan').value;
+						if(switchSecs.length > 0 && switchVLAN == '' && defaultWanIf.indexOf('.') > -1)
+						{
+							// We have switch config but switch_wan_vlan missing, do nothing
+							// We should never get here
+						}
+						else if(switchVLAN == 'switch_vlan')
+						{
+							var origdevice = defaultWanIf.split('.')[0];
+							var origvlan = defaultWanIf.split('.')[1];
+							var origports = uci.get('network','switch_wan_vlan','ports');
+							var taggedports = origports.split(' ').map(port => port.indexOf('t') > -1 ? port : port + 't').join(' ');
+							uci.set('network','switch_wan_vlan','orig_vlan',origvlan);
+							uci.set('network','switch_wan_vlan','orig_ports',origports);
+							uci.set('network','switch_wan_vlan','vlan',vid);
+							uci.set('network','switch_wan_vlan','ports',taggedports);
+
+							uci.set('network','wan','device',origdevice + '.' + vid);
+
+							// Create wan_dev
+							preCommands = preCommands + "\nuci set network.wan_" + origdevice + "_" + vid + "_dev=device\n";
+							uci.set('network', 'wan_' + origdevice + "_" + vid + '_dev', 'name', origdevice + "." + vid);
+							uci.set('network', 'wan_' + origdevice + "_" + vid + '_dev', 'macaddr', defaultWanMac.toLowerCase());
+						}
+						else
+						{
+							//preCommands = preCommands + "\nuci set network.wan_vlan" + vid + "_dev=device\n";
+							uci.set('network','wan_vlan' + vid + '_dev','','device');
+							uci.set('network','wan_vlan' + vid + '_dev','name','wanv.' + vid);
+							uci.set('network','wan_vlan' + vid + '_dev','type','8021q');
+							uci.set('network','wan_vlan' + vid + '_dev','ifname',defaultWanIf);
+							uci.set('network','wan_vlan' + vid + '_dev','vid',vid);
+
+							uci.set('network','wan','device','wanv.' + vid);
+						}
+					}
+					else
+					{
+						uci.set('network', 'wan', 'device', defaultWanIf);
+					}
 				}
 			}
 
@@ -282,18 +366,32 @@ function saveChanges()
 							var mac = document.getElementById("wifi_guest_mac_g").value;
 							if(mac == "")
 							{
+								var attempt = 0;
 								do
 								{
-									if(distribTarget.match(/mvebu/))
+									if(distribTarget.match(/mvebu/) && attempt < 10)
 									{
 										wmacIdx = wirelessIfs.indexOf(wifiDevG.replace("radio","wlan"));
 										ref = currentWirelessMacs[wmacIdx];
+										if(ref == undefined)
+										{
+											// Assume wifidevs will get currentLanMac + 1, 2... mark these conflicting
+											for(var wifIdx = 0; wifIdx < wirelessIfs.length; wifIdx++)
+											{
+												var lastDig = parseInt(currentLanMac.slice(-1),16);
+												lastDig = isNaN(lastDig) ? 0 : lastDig;
+												lastDig = ((lastDig + wifIdx + 1) % 16).toString(16);
+												macConflict.push(currentLanMac.slice(0,-1) + lastDig);
+											}
+											ref = currentLanMac;
+										}
 										mac = getRandomMacWithMask(true,true,ref,"fd:ff:ff:ff:ff:f0");
 									}
 									else
 									{
 										mac = getRandomMac(true,true);
 									}
+									attempt = attempt + 1;
 								} while(macConflict.join(",").toLowerCase().split(",").indexOf(mac.toLowerCase()) != -1);
 							}
 							macConflict.push(mac);
@@ -327,18 +425,32 @@ function saveChanges()
 					   	var mac = document.getElementById("wifi_guest_mac_a").value ;
 						if(mac == "")
 						{
+							var attempt = 0;
 							do
 							{
-								if(distribTarget.match(/mvebu/))
+								if(distribTarget.match(/mvebu/) && attempt < 10)
 								{
 									wmacIdx = wirelessIfs.indexOf(wifiDevA.replace("radio","wlan"));
 									ref = currentWirelessMacs[wmacIdx];
+									if(ref == undefined)
+									{
+										// Assume wifidevs will get currentLanMac + 1, 2... mark these conflicting
+										for(var wifIdx = 0; wifIdx < wirelessIfs.length; wifIdx++)
+										{
+											var lastDig = parseInt(currentLanMac.slice(-1),16);
+											lastDig = isNaN(lastDig) ? 0 : lastDig;
+											lastDig = ((lastDig + wifIdx + 1) % 16).toString(16);
+											macConflict.push(currentLanMac.slice(0,-1) + lastDig);
+										}
+										ref = currentLanMac;
+									}
 									mac = getRandomMacWithMask(true,true,ref,"fd:ff:ff:ff:ff:f0");
 								}
 								else
 								{
 									mac = getRandomMac(true,true);
 								}
+								attempt = attempt + 1;
 							} while(macConflict.join(",").toLowerCase().split(",").indexOf(mac.toLowerCase()) != -1);
 						}
 						macConflict.push(mac);
@@ -733,7 +845,17 @@ function saveChanges()
 					var ssid = document.getElementById("wifi_ssid1a").value;
 					uci.set("wireless", ap2cfg, "ssid", ssid );
 					ssid || uci.set("wireless", ap2cfg, "disabled", "1");
-					dup_sec_options("wireless", apcfg, ap2cfg, ['ieee80211r', 'ft_psk_generate_local', 'pmk_r1_push', 'r0kh', 'r1kh', 'hidden', 'isolate', 'encryption', 'key', 'auth_server', 'auth_port'])
+					dup_sec_options("wireless", apcfg, ap2cfg, ['ieee80211r', 'ft_psk_generate_local', 'pmk_r1_push', 'r0kh', 'r1kh', 'hidden', 'isolate', 'auth_server', 'auth_port'])
+					var enc1a = getSelectedValue("wifi_encryption1a");
+					uci.set("wireless", ap2cfg, "encryption", enc1a);
+					if(enc1a != "none" && enc1a != "owe")
+					{
+						uci.set("wireless", ap2cfg, "key", document.getElementById("wifi_pass1a").value);
+					}
+					else
+					{
+						uci.remove("wireless", ap2cfg, "key");
+					}
 				}
 				if(apgn2cfg != "")
 				{
@@ -1188,6 +1310,7 @@ function proofreadAll()
 	var vn = validateNumeric;
 	var vid = validateSsid;
 	var vp = function(text){ return validatePass(text, 'wifi_encryption1'); }
+	var vp1a = function(text){ return validatePass(text, 'wifi_encryption1a'); }
 	var vpg = function(text){ return validatePass(text, 'wifi_guest_encryption1'); }
 	var vp2 = function(text){ return validatePass(text, 'wifi_encryption2'); }
 	var vpb = function(text){ return validatePass(text, 'bridge_encryption'); }
@@ -1199,6 +1322,7 @@ function proofreadAll()
 	var vip6m = function(text) { return validateNumericRange(text, 1, 128); };
 	var vip6h = function(text) { return validateLengthRange(text,0,4) || (text.match(/[^0-9a-f]/) == null ? 0 : 1); };
 	var vip6if = function(text) { return validateIP6(text) || ((ip6_canonical(text) == ip6_mask(text,-32)) ? 0 : 1); };
+	var vwv = function(text){ return validateNumericRange(text, 1, 4096); };
 
 	var testWds = function(tableContainerId, selectId, wdsValue)
 	{
@@ -1215,16 +1339,16 @@ function proofreadAll()
 	if(document.getElementById("global_gateway").checked)
 	{
 		var inputIds = [
-				'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_mac', 'wan_mtu', 'wan_static_ip6', 'wan_static_gateway6',
+				'wan_pppoe_user', 'wan_pppoe_pass', 'wan_pppoe_max_idle', 'wan_pppoe_reconnect_pings', 'wan_pppoe_interval', 'wan_static_ip', 'wan_static_mask', 'wan_static_gateway', 'wan_mac', 'wan_mtu', 'wan_static_ip6', 'wan_static_gateway6','wan_vlan',
 				'lan_ip', 'lan_mask', 'lan_gateway', 'lan_ip6assign', 'lan_ip6hint', 'lan_ip6ifaceid', 'lan_ip6gw',
-				'wifi_txpower', 'wifi_txpower_5ghz', 'wifi_ssid1', 'wifi_pass1', 'wifi_ft_key', 'wifi_guest_pass1', 'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_pass2',
+				'wifi_txpower', 'wifi_txpower_5ghz', 'wifi_ssid1', 'wifi_pass1', 'wifi_pass1a', 'wifi_ft_key', 'wifi_guest_pass1', 'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_pass2',
 				'wan_3g_device', 'wan_3g_apn'
 		];
 
 		var functions= [
-				vlr1, vlr1, vn, vn, vn, vip, vnm, vip, vm, vn, vip6fr, vip6,
+				vlr1, vlr1, vn, vn, vn, vip, vnm, vip, vm, vn, vip6fr, vip6, vwv,
 				vip, vnm, vip, vip6m, vip6h, vip6if, vip6,
-				vtp, vtpa, vid, vp, vfk, vpg, vip, vnp, vid, vp2,
+				vtp, vtpa, vid, vp, vp1a, vfk, vpg, vip, vnp, vid, vp2,
 				vlr1, vlr1
 		];
 
@@ -1387,7 +1511,16 @@ function setGlobalVisibility()
 
 function setWanVisibility()
 {
-	var wanIds=['wan_dhcp_ip_container', 'wan_dhcp_expires_container', 'wan_pppoe_user_container', 'wan_pppoe_pass_container', 'wan_pppoe_reconnect_mode_container', 'wan_pppoe_max_idle_container', 'wan_pppoe_reconnect_pings_container', 'wan_pppoe_interval_container', 'wan_static_ip_container', 'wan_static_mask_container', 'wan_static_gateway_container', 'wan_mac_container', 'wan_mtu_container', 'wan_ping_container', 'lan_gateway_container', 'wan_3g_device_container', 'wan_3g_user_container', 'wan_3g_pass_container', 'wan_3g_apn_container', 'wan_3g_pincode_container', 'wan_3g_service_container', 'wan_3g_isp_container', 'wan_dhcp6_ip_container', 'wan_static_ip6_container', 'wan_static_gateway6_container', 'lan_ip6gw_container', 'lan_ip6addr_container', 'lan_ip6hint_container', 'lan_ip6ifaceid_container', 'lan_ip6assign_container'];
+	var wanIds=[
+			'wan_dhcp_ip_container', 'wan_dhcp_expires_container',
+			'wan_pppoe_user_container', 'wan_pppoe_pass_container', 'wan_pppoe_reconnect_mode_container', 'wan_pppoe_max_idle_container', 'wan_pppoe_reconnect_pings_container', 'wan_pppoe_interval_container',
+			'wan_static_ip_container', 'wan_static_mask_container', 'wan_static_gateway_container',
+			'wan_mac_container', 'wan_mtu_container', 'wan_vlan_container', 'wan_ping_container',
+			'lan_gateway_container',
+			'wan_3g_device_container', 'wan_3g_user_container', 'wan_3g_pass_container', 'wan_3g_apn_container', 'wan_3g_pincode_container', 'wan_3g_service_container', 'wan_3g_isp_container',
+			'wan_dhcp6_ip_container', 'wan_static_ip6_container', 'wan_static_gateway6_container',
+			'lan_ip6gw_container', 'lan_ip6addr_container', 'lan_ip6hint_container', 'lan_ip6ifaceid_container', 'lan_ip6assign_container'
+	];
 
 	var maxIdleIndex = 5;
 	var notWifi= getSelectedValue('wan_protocol').match(/wireless/) ? 0 : 1;
@@ -1396,12 +1529,12 @@ function setWanVisibility()
 	var l6a = getSelectedValue('lan_ip6assign_option') == "enabled" ? 1 : 0;
 	var nl6a = !l6a;
 
-	var dhcpVisability     = [1,1,  0,0,0,0,0,0,  0,0,0,  1,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
-	var pppoeVisability    = [0,0,  1,1,1,1,1,1,  0,0,0,  notWifi,notWifi,1, 0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
-	var staticVisability   = [0,0,  0,0,0,0,0,0,  1,1,1,  1,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
-	var disabledVisability = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,0,             1, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
-	var tgVisability       = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,1,             0, 1,1,1,1,1,1,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
-	var qmiVisability      = [0,0,  0,0,0,0,0,0,  0,0,0,  1,0,1,             0, 1,1,1,1,1,0,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var dhcpVisability     = [1,1,  0,0,0,0,0,0,  0,0,0,  1,notWifi,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var pppoeVisability    = [0,0,  1,1,1,1,1,1,  0,0,0,  notWifi,notWifi,notWifi,1, 0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var staticVisability   = [0,0,  0,0,0,0,0,0,  1,1,1,  1,notWifi,notWifi,1,       0, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var disabledVisability = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,0,0,			 1, 0,0,0,0,0,0,0,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var tgVisability       = [0,0,  0,0,0,0,0,0,  0,0,0,  0,0,0,1,             	 0, 1,1,1,1,1,1,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
+	var qmiVisability      = [0,0,  0,0,0,0,0,0,  0,0,0,  1,0,0,1,             	 0, 1,1,1,1,1,0,1,  w6en,w6p,w6p,  nl6a,nl6a,l6a,l6a,l6a];
 
 	var wanVisibilities= new Array();
 	wanVisibilities['dhcp'] = dhcpVisability;
@@ -1442,6 +1575,7 @@ function setWifiVisibility()
 			names.push('OWE');
 		}
 		setAllowableSelections('wifi_encryption1', values, names);
+		setAllowableSelections('wifi_encryption1a', values, names);
 	}
 	else
 	{
@@ -1457,6 +1591,7 @@ function setWifiVisibility()
 			values.push('owe');
 			names.push('OWE');
 		}
+		setAllowableSelections('wifi_encryption1a', values.slice(), names.slice());
 		if(wpad_eap)
 		{
 			values.push('wpa2');
@@ -1581,6 +1716,8 @@ function setWifiVisibility()
 			'wifi_encryption2_container',
 			'wifi_fixed_encryption2_container',
 			'wifi_pass2_container',
+			'wifi_encryption1a_container',
+			'wifi_pass1a_container',
 			];
 
 	var ae = wifiDevA != "" ? 1 : 0; //A band exists
@@ -1594,6 +1731,9 @@ function setWifiVisibility()
 	var e1 = document.getElementById('wifi_encryption1').value;
 	var p1 = (e1 != 'none' && e1 != 'owe') ? 1 : 0;
 	var r1 = (e1 == 'wpa' || e1 == 'wpa2') ? 1 : 0;
+	var da = (g && a) ? 1 : 0;
+	var e1a = da ? document.getElementById('wifi_encryption1a').value : 'none';
+	var p1a = da && (e1a != 'none' && e1a != 'owe') ? 1 : 0;
 	var k1 = r1 && (getSelectedValue('wifi_ft') == "enabled" ? 1 : 0);
 	var gns = (wirelessDriver == "mac80211" && !isb43); //drivers that support guest networks
 	var gn = getSelectedValue("wifi_guest_mode") != "disabled" ? 1 : 0;
@@ -1608,11 +1748,11 @@ function setWifiVisibility()
 	var p2 = e2.match(/sae/) || e2.match(/psk/) || e2.match(/WPA/) ? 1 : 0;
 
 	var wifiVisibilities = new Array();
-	wifiVisibilities['ap']       = [1,1,gw,g,ae,aw,a,1,mf,   1,a,1,0,a,as2,p1,k1,1,1,1,p1,r1,r1, gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   0,0,  0,0,0,0,0,0,0,0,0,0,0 ];
-	wifiVisibilities['ap+wds']   = [1,1,gw,g,ae,aw,a,1,mf,   1,0,1,0,0,0,p1,k1,1,1,1,p1,r1,r1,   gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   b,b,  0,0,0,0,0,0,0,0,0,0,0 ];
-	wifiVisibilities['sta']      = [1,1,gw,g,ae,aw,a,1,mf,   0,0,0,0,0,0,0,0,0,0,0,0,0,0,        0,0,0,0,0,0,0,0,0,                  0,0,  0,0,0,1,g,0,a,0,1,0,p2];
-	wifiVisibilities['ap+sta']   = [1,1,gw,g,ae,aw,a,1,mf,   1,a,1,0,a,as2,p1,k1,1,1,1,p1,r1,r1, gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   0,0,  1,0,0,1,g,0,a,a,1,0,p2];
-	wifiVisibilities['disabled'] = [0,0,0,0,0,0,0,0,0,       0,0,0,0,0,0,0,0,0,0,0,0,0,0,        0,0,0,0,0,0,0,0,0,                  0,0,  0,0,0,0,0,0,0,0,0,0,0 ];
+	wifiVisibilities['ap']       = [1,1,gw,g,ae,aw,a,1,mf,   1,a,1,0,a,as2,p1,k1,1,1,1,p1,r1,r1, gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   0,0,  0,0,0,0,0,0,0,0,0,0,0, da,p1a];
+	wifiVisibilities['ap+wds']   = [1,1,gw,g,ae,aw,a,1,mf,   1,0,1,0,0,0,p1,k1,1,1,1,p1,r1,r1,   gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   b,b,  0,0,0,0,0,0,0,0,0,0,0, da,p1a];
+	wifiVisibilities['sta']      = [1,1,gw,g,ae,aw,a,1,mf,   0,0,0,0,0,0,0,0,0,0,0,0,0,0,        0,0,0,0,0,0,0,0,0,                  0,0,  0,0,0,1,g,0,a,0,1,0,p2, 0,0];
+	wifiVisibilities['ap+sta']   = [1,1,gw,g,ae,aw,a,1,mf,   1,a,1,0,a,as2,p1,k1,1,1,1,p1,r1,r1, gns,gng,gna,gp1,gn,gn,gn,gp1,gns,   0,0,  1,0,0,1,g,0,a,a,1,0,p2, da,p1a];
+	wifiVisibilities['disabled'] = [0,0,0,0,0,0,0,0,0,       0,0,0,0,0,0,0,0,0,0,0,0,0,0,        0,0,0,0,0,0,0,0,0,                  0,0,  0,0,0,0,0,0,0,0,0,0,0, 0,0];
 
 	var wifiVisibility = wifiVisibilities[ wifiMode ];
 	setVisibility(wifiIds, wifiVisibility);
@@ -2107,6 +2247,50 @@ function resetData()
 	enableAssociatedField(document.getElementById('wan_use_mac'), 'wan_mac', defaultWanMac);
 	enableAssociatedField(document.getElementById('wan_use_mtu'), 'wan_mtu', 1500);
 
+	// WAN VLAN
+	// If we have swconfig and WAN is part of the switch VLAN, handle differently
+	var switchSecs = uciOriginal.getAllSectionsOfType('network','switch_vlan');
+	var switchVLAN = uciOriginal.get('network','switch_wan_vlan');
+	if(switchSecs.length > 0 && switchVLAN == '' && defaultWanIf.indexOf('.') > -1)
+	{
+		// We have switch config but no wan vlan config and the default WAN device is a VLAN, don't allow the user to configure
+		byId("wan_use_vlan").disabled = true;
+	}
+	else if(switchVLAN == 'switch_vlan')
+	{
+		var origvlan = uciOriginal.get('network','switch_wan_vlan','orig_vlan');
+		var vlan= uciOriginal.get('network','switch_wan_vlan','vlan');
+		var origports = uciOriginal.get('network','switch_wan_vlan','orig_ports');
+		var ports = uciOriginal.get('network','switch_wan_vlan','ports');
+		if(origvlan != ''  && origports != '' && (vlan != origvlan || ports != origports))
+		{
+			byId("wan_vlan").value = vlan;
+			byId("wan_use_vlan").checked = true;
+		}
+		else
+		{
+			byId("wan_use_vlan").checked = false;
+		}
+	}
+	else
+	{
+		byId("wan_use_vlan").disabled = false;
+		var devList = uciOriginal.getAllSectionsOfType('network','device');
+		var wanVLANDev = null;
+		devList.forEach(function(devName) {
+			if(devName.match(/wan_vlan[0-9]+_dev/) !== null)
+			{
+				wanVLANDev = devName;
+			}
+		});
+		byId("wan_use_vlan").checked = wanVLANDev !== null;
+		if(wanVLANDev !== null)
+		{
+			byId("wan_vlan").value = uciOriginal.get('network',wanVLANDev,'vid');
+		}
+	}
+	enableAssociatedField(document.getElementById('wan_use_vlan'), 'wan_vlan', '10');
+
 	//note: we have to set pppoe_reconnect_mode in a custom manner, it is a bit non-standard
 	keepalive=uciOriginal.get("network", "wan", "keepalive");
 	demand=uciOriginal.get("network", "wan", "demand");
@@ -2115,7 +2299,15 @@ function resetData()
 
 	//initialize dns
 	document.getElementById("lan_dns_force").checked = (uciOriginal.get("firewall", firewallDefaultSections[0], "force_router_dns") == "1");
-	document.getElementById("lan_dns_altroot").checked = (uciOriginal.get("dhcp", uciOriginal.getAllSectionsOfType("dhcp", "dnsmasq").shift(), "server") instanceof Array);
+	var dnsmasq_servers = uciOriginal.get("dhcp", uciOriginal.getAllSectionsOfType("dhcp", "dnsmasq").shift(), "server");
+	dnsmasq_servers = dnsmasq_servers == '' ? [] : dnsmasq_servers;
+	var doh_plugin_servers = uciOriginal.get("dhcp", uciOriginal.getAllSectionsOfType("dhcp", "dnsmasq").shift(), "doh_server");
+	doh_plugin_servers = doh_plugin_servers == '' ? [] : doh_plugin_servers;
+	doh_plugin_servers = doh_plugin_servers.concat(['/mask.icloud.com/', '/mask-h2.icloud.com/', '/use-application-dns.net/']);
+	var altroot_server_check = dnsmasq_servers.filter(function(el) {
+		return doh_plugin_servers.indexOf(el) < 0
+	});
+	document.getElementById("lan_dns_altroot").checked = altroot_server_check.length > 0;
 
 	//is ping drop from WAN side?
 	document.getElementById("drop_wan_ping").checked = (uciOriginal.get("firewall", getPingSection(), "target").toLowerCase() == "drop");
@@ -2262,7 +2454,7 @@ function resetData()
 				Awifi_vals.push('11anac');
 				Awifi_names.push('A+N+AC');
 			}
-			else if(AwifiN)
+			if(AwifiN)
 			{
 				Awifi_vals.push('11an');
 				Awifi_names.push('A+N');
@@ -2383,7 +2575,7 @@ function resetData()
 		setSelectedValue("wifi_hwmode_5ghz", hwAmode);
 	}
 
-	var wirelessIds=['wifi_channel1', 'wifi_channel2', 'wifi_channel1_5ghz', 'wifi_channel1_seg2_5ghz', 'wifi_channel2_5ghz', 'wifi_ssid1', 'wifi_ssid1a', 'wifi_encryption1', 'wifi_pass1', 'wifi_guest_ssid1', 'wifi_guest_mac_g', 'wifi_guest_ssid1a', 'wifi_guest_mac_a', 'wifi_guest_encryption1', 'wifi_guest_pass1',        'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_encryption2', 'wifi_pass2'];
+	var wirelessIds=['wifi_channel1', 'wifi_channel2', 'wifi_channel1_5ghz', 'wifi_channel1_seg2_5ghz', 'wifi_channel2_5ghz', 'wifi_ssid1', 'wifi_ssid1a', 'wifi_encryption1', 'wifi_pass1', 'wifi_guest_ssid1', 'wifi_guest_mac_g', 'wifi_guest_ssid1a', 'wifi_guest_mac_a', 'wifi_guest_encryption1', 'wifi_guest_pass1',        'wifi_server1', 'wifi_port1', 'wifi_ssid2', 'wifi_encryption2', 'wifi_pass2', 'wifi_encryption1a', 'wifi_pass1a'];
 	var wirelessPkgs= new Array();
 	var wIndex;
 	for(wIndex=0; wIndex < wirelessIds.length; wIndex++)
@@ -2393,10 +2585,10 @@ function resetData()
 	var default5ID = uciOriginal.get("wireless", apcfg, "ssid") ? uciOriginal.get("wireless", apcfg, "ssid") + " 5GHz" : "Gargoyle 5GHz";
 	var defaultGuest5ID = apgncfg && uciOriginal.get("wireless", apgncfg, "ssid") ? uciOriginal.get("wireless", apgncfg, "ssid") + " 5GHz" : "Guests 5GHz";
 
-	var wirelessSections=[wifiDevG, wifiDevG, wifiDevA, wifiDevA, wifiDevA, apgcfg, apacfg, apcfg, apcfg,                                                                apgngcfg, apgngcfg, apgnacfg, apgnacfg, apgncfg, apgncfg,               apcfg, apcfg, othercfg, othercfg, othercfg];
-	var wirelessOptions=['channel', 'channel', 'channel', 'channel2', 'channel', 'ssid', 'ssid', 'encryption', 'key',                                                    'ssid', 'macaddr', 'ssid', 'macaddr', 'encryption', 'key',                   'auth_server', 'auth_port', 'ssid', 'encryption', 'key'];
-	var wirelessParams=["5", "5", "36","36","36", 'Gargoyle', default5ID, 'none','',        'Guests', '', defaultGuest5ID, '', 'none', '',                                  '', '', 'ExistingWireless', 'none', ''];
-	var wirelessFunctions=[lsv, lsv, lsv,lsv, lsv, lv, lv, lsv, lv,                                                                                                 lv, lv, lv, lv, lsv, lv,                                                        lv, lv, lv, lsv, lv];
+	var wirelessSections=[wifiDevG, wifiDevG, wifiDevA, wifiDevA, wifiDevA, apgcfg, apacfg, apcfg, apcfg,                                                                apgngcfg, apgngcfg, apgnacfg, apgnacfg, apgncfg, apgncfg,               apcfg, apcfg, othercfg, othercfg, othercfg, apacfg, apacfg];
+	var wirelessOptions=['channel', 'channel', 'channel', 'channel2', 'channel', 'ssid', 'ssid', 'encryption', 'key',                                                    'ssid', 'macaddr', 'ssid', 'macaddr', 'encryption', 'key',                   'auth_server', 'auth_port', 'ssid', 'encryption', 'key', 'encryption', 'key'];
+	var wirelessParams=["5", "5", "36","36","36", 'Gargoyle', default5ID, 'none','',        'Guests', '', defaultGuest5ID, '', 'none', '',                                  '', '', 'ExistingWireless', 'none', '', 'none', ''];
+	var wirelessFunctions=[lsv, lsv, lsv,lsv, lsv, lv, lv, lsv, lv,                                                                                                 lv, lv, lv, lv, lsv, lv,                                                        lv, lv, lv, lsv, lv, lsv, lv];
 
 	loadVariables(uciOriginal, wirelessIds, wirelessPkgs, wirelessSections, wirelessOptions, wirelessParams, wirelessFunctions);
 
@@ -3839,6 +4031,20 @@ function setHwMode(selectCtl)
 
 		setWifiVisibility();
 	}
+
+	//the per-band 5GHz encryption/password fields are driven only by the
+	//setWifiVisibility table, but setHwMode can be reached on its own when a
+	//radio is toggled (it is not routed through setWifiVisibility). Refresh them
+	//here too -- directly, not by calling setWifiVisibility (which would recurse
+	//via its own setHwMode call) -- so the 5GHz encryption field can never stay
+	//hidden while saveChanges still writes its value.
+	var perBandMode = getSelectedValue("wifi_mode");
+	var gEnabled = getSelectedValue("wifi_hwmode") == "disabled" ? 0 : 1;
+	var aEnabled = getSelectedValue("wifi_hwmode_5ghz") == "disabled" ? 0 : 1;
+	var showEnc1a = (gEnabled && aEnabled) && (perBandMode == "ap" || perBandMode == "ap+sta" || perBandMode == "ap+wds");
+	var enc1a = document.getElementById("wifi_encryption1a").value;
+	document.getElementById("wifi_encryption1a_container").style.display = showEnc1a ? "block" : "none";
+	document.getElementById("wifi_pass1a_container").style.display = (showEnc1a && enc1a != "none" && enc1a != "owe") ? "block" : "none";
 }
 
 function getMaxTxPower(band)

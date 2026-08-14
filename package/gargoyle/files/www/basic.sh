@@ -620,6 +620,14 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 						<span class="col-xs-7"><input type="text" name="wan_mtu" id="wan_mtu" class="form-control" oninput="proofreadNumeric(this)" size="20" maxlength="4"/></span>
 					</div>
 
+					<div id="wan_vlan_container" class="row form-group">
+						<span class="col-xs-5">
+							<input type="checkbox" id="wan_use_vlan" onclick="enableAssociatedField(this, 'wan_vlan', '10')"/>
+							<label class="short-left-pad" for="wan_use_vlan" id="wan_vlan_label"><%~ CustVLAN %>:</label>
+						</span>
+						<span class="col-xs-7"><input type="text" name="wan_vlan" id="wan_vlan" class="form-control" oninput="proofreadNumeric(this)" size="20" maxlength="4"/></span>
+					</div>
+
 					<div id="wan_ping_container" class="row form-group">
 						<span class="col-xs-12">
 							<input type="checkbox" id="drop_wan_ping"/>
@@ -1047,6 +1055,29 @@ var isb43 = wirelessDriver == "mac80211" && (!GwifiN) ? true : false ;
 						<input type="password" id="wifi_pass1" class="form-control" size="20" oninput="proofreadPass(this, 'wifi_encryption1')" autocomplete="new-password"/>&nbsp;&nbsp;
 						<input type="checkbox" id="show_pass1" onclick="togglePass('wifi_pass1')" autocomplete="off"/>
 						<label for="show_pass1" id="show_pass1_label"><%~ rvel %></label><br/>
+					</span>
+				</div>
+
+				<div id="wifi_encryption1a_container" class="row indent">
+					<label class="col-xs-5" for="wifi_encryption1a" id="wifi_encryption1a_label">5GHz <%~ Encr %>:</label>
+					<span class="col-xs-7" >
+						<select id="wifi_encryption1a" class="form-control" onchange="setWifiVisibility(); proofreadPass('wifi_pass1a', this)">
+							<option value="none"><%~ None %></option>
+							<option value="sae-mixed">WPA3/WPA2 SAE/PSK</option>
+							<option value="sae">WPA3 SAE</option>
+							<option value="psk2">WPA2 PSK</option>
+							<option value="psk">WPA PSK</option>
+							<option value="owe">OWE</option>
+						</select>
+					</span>
+				</div>
+
+				<div id="wifi_pass1a_container" class="row indent">
+					<label class="col-xs-5" for="wifi_pass1a" id="wifi_pass1a_label">5GHz <%~ Pswd %>:</label>
+					<span class="col-xs-7" >
+						<input type="password" id="wifi_pass1a" class="form-control" size="20" oninput="proofreadPass(this, 'wifi_encryption1a')" autocomplete="new-password"/>&nbsp;&nbsp;
+						<input type="checkbox" id="show_pass1a" onclick="togglePass('wifi_pass1a')" autocomplete="off"/>
+						<label for="show_pass1a" id="show_pass1a_label"><%~ rvel %></label><br/>
 					</span>
 				</div>
 

@@ -68,10 +68,14 @@
 	echo "var ports = new Array();"
 	/usr/lib/gargoyle/switchinfo.sh
 
-	if [ -e /var/run/pppoe-wan.pid ]; then
-		deltatime=$((`date -r /var/run/crond.pid +%s`-`date -r /var/run/pppoe-wan.pid +%s`))
+	wan_dev=$(uci -q get network.wan.device)
+	wan_dev_speed=$(. /usr/lib/gargoyle/ethportinfo.sh && get_status_speed "$wan_dev")
+	echo "var wan_port='$wan_dev_speed';"
+
+	if [ -e /var/run/pppd/pppoe-wan.pid ]; then
+		deltatime=$((`date -r /var/run/crond.pid +%s`-`date -r /var/run/pppd/pppoe-wan.pid +%s`))
 		[ $deltatime -lt 60 ] && deltatime=0 || let deltatime-=30
-		echo "var pppoeUptime=\""$((`date +%s`-`date -r /var/run/pppoe-wan.pid +%s`-$deltatime))"\";"
+		echo "var pppoeUptime=\""$((`date +%s`-`date -r /var/run/pppd/pppoe-wan.pid +%s`-$deltatime))"\";"
 	fi
 
 	echo "var wifi_status = new Array();"
@@ -126,6 +130,7 @@
 
 			<div class="panel-body">
 				<ul class="list-group">
+					<li class="list-group-item"><span class="list-group-item-title"><%~ WPrtSpd %>:</span><span id="wan_port_speed"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ WIPA %>:</span><span id="wan_ip"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ WNmsk %>:</span><span id="wan_mask"></span></li>
 					<li class="list-group-item"><span class="list-group-item-title"><%~ WMAdd %>:</span><span id="wan_mac"></span></li>

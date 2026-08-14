@@ -66,6 +66,7 @@ function saveChanges()
 		tableData = getTableDataArray(staticIpTable, true, false);
 		for(hostIdx = 0; hostIdx < tableData.length; hostIdx++)
 		{
+			if(tableData[hostIdx][1] == "" || tableData[hostIdx][1] == "-") { continue; }
 			cfgid = "static_host_" + (hostIdx+1);
 			uci.set("dhcp",cfgid,"","host");
 			hostname = tableData[hostIdx][0];
@@ -170,6 +171,7 @@ function resetData()
 		hostSection = hostSections[secIndex];
 		host = uciOriginal.get("dhcp",hostSection,"name");
 		mac = uciOriginal.get("dhcp",hostSection,"mac");
+		if(mac == "") { continue; }
 		ipv4 = uciOriginal.get("dhcp",hostSection,"ip");
 		hostid = uciOriginal.get("dhcp",hostSection,"hostid");
 		ipv6 = hostid == "" ? "" : ("00000000" + hostid).slice(-8).replace(/([0-9a-f]{4})([0-9a-f]{4})/i,"::$1:$2");
@@ -363,6 +365,26 @@ function addStatic()
 	}
 }
 
+function validateDHCPHostName(hostname)
+{
+	if(hostname == '')
+	{
+		// Hostname is optional
+		return 0;
+	}
+	else if(hostname.match(/^[a-zA-Z0-9-]+$/) == null)
+	{
+		// No special symbols in hostnames
+		return 1;
+	}
+	return 0;
+}
+
+function proofreadDHCPHostName(input)
+{
+	proofreadText(input, validateDHCPHostName, 0);
+}
+
 function proofreadStatic(excludeRow)
 {
 	var proofreadIP6Suffix = function()
@@ -392,10 +414,10 @@ function proofreadStatic(excludeRow)
 		return 0;
 	};
 
-	addIds=['add_mac', 'add_ip', 'add_hostid', 'add_duid'];
-	labelIds= ['add_mac_label', 'add_ip_label', 'add_hostid_label', 'add_duid_label'];
-	functions = [validateMac, validateIP, proofreadIP6Suffix, proofreadDUID];
-	returnCodes = [0,0,0,0];
+	addIds=['add_host', 'add_mac', 'add_ip', 'add_hostid', 'add_duid'];
+	labelIds= ['add_host_label', 'add_mac_label', 'add_ip_label', 'add_hostid_label', 'add_duid_label'];
+	functions = [validateDHCPHostName, validateMac, validateIP, proofreadIP6Suffix, proofreadDUID];
+	returnCodes = [0,0,0,0,0];
 	visibilityIds=addIds;
 	errors = proofreadFields(addIds, labelIds, functions, returnCodes, visibilityIds, document);
 	if(errors.length == 0)

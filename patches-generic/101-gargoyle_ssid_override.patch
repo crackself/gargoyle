@@ -1,11 +1,11 @@
---- a/package/kernel/mac80211/files/lib/wifi/mac80211.sh
-+++ b/package/kernel/mac80211/files/lib/wifi/mac80211.sh
-@@ -181,7 +181,7 @@ detect_mac80211() {
- 			set wireless.default_radio${devidx}.device=radio${devidx}
- 			set wireless.default_radio${devidx}.network=lan
- 			set wireless.default_radio${devidx}.mode=ap
--			set wireless.default_radio${devidx}.ssid=OpenWrt
-+			set wireless.default_radio${devidx}.ssid=Gargoyle
- 			set wireless.default_radio${devidx}.encryption=none
- EOF
- 		uci -q commit wireless
+--- a/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc
++++ b/package/network/config/wifi-scripts/files/lib/wifi/mac80211.uc
+@@ -104,7 +104,7 @@
+ set ${si}.device='${name}'
+ set ${si}.network='lan'
+ set ${si}.mode='ap'
+-set ${si}.ssid='${defaults?.ssid || "OpenWrt"}'
++set ${si}.ssid='${defaults?.ssid || "Gargoyle"}'
+ set ${si}.encryption='${defaults?.encryption || "none"}'
+ set ${si}.key='${defaults?.key || ""}'
+ 
